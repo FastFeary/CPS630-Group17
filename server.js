@@ -39,9 +39,17 @@ app.post('/api/items', express.json(), (req, res) => {
     const items = readItems();                              // I added this
     const newItem = req.body;
     if (newItem && newItem.name && newItem.description) {
-        if (!newItem.id) {
+        /* if (!newItem.id) {
             newItem.id = nextId++;  // auto-generate ID
         }
+        */
+
+        let nextId = 1;                                         // I added this
+        if (items.length > 0) {
+            nextId = items[items.length - 1].id + 1;
+        }
+        newItem.id = nextId;
+
         items.push(newItem);
         writeItems(items);                                  // I added this
         // const items = readItems();
