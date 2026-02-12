@@ -1,0 +1,25 @@
+{
+  "name": "cps630-group17",
+  "version": "1.0.0",
+  "description": "4 TMU students working on CPS630 assignments",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FastFeary/CPS630-Group17.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/FastFeary/CPS630-Group17/issues"
+  },
+  "homepage": "https://github.com/FastFeary/CPS630-Group17#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
