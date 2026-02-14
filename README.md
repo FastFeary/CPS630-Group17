@@ -32,7 +32,7 @@ The user may also go under "add class" in the top right, and after filling out t
 
 Classes can also be deleted altogether through "delete class" under the current available classes, which after that will not be available until they add more classes to the website.
 
-## Reflection (will fill rest out after testing)
+## Reflection
 Submitted material includes the Node.js server, one JSON file with a list of items/classes each with an id, title, description and image. There are also the HTML/CSS files for available classes, current bookings, and creating classes.
 
 The main functions lie in server.js, with REST API routes providing interaction between the client and the server: GET may either retrieve all classes or a single class by ID, POST adds a new class to the JSON file, and DELETE removes classes by ID.
