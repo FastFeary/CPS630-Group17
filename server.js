@@ -26,6 +26,10 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '/views/index.html'));
 });
 
+app.get('/booking', (req, res) => {
+    res.sendFile(path.join(__dirname, '/views/booking.html'));
+});
+
 // REST API routes 
 // GET = retreive all items
 app.get('/api/items', (req, res) => {

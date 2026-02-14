@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classes</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <h1>Available Classes</h1>
+    
+    <!-- container that displays all classes (we update constantly so it stays up to date)-->
+    <div id="Classes">
+        <h2>Classes by day of week</h2>
+        <div id="items-display"></div>
+    </div>
+    
+    <!-- Add New Book Form -->
+    <div id="new-form">
+        <h2>Add New Class</h2>
+        <form id="new-form">
+            <input type="number"    id="new-id"   placeholder="Course Code"              required>
+            <input type="text"      id="new-name"  placeholder="Name"              required>
+            <input type="text"      id="new-description" placeholder="Description"         required>
+            <!-- <input type="number"    id="new-year"   placeholder="Weekday"           required>
+            <input type="text"      id="new-note"   placeholder="Class Space"       required> -->
+            <button type="submit">Add Class</button>
+        </form>
+    </div>
+    
+    <!-- Update Class Space (Update Book) Form -->
+    <div id="update-book">
+        <h2>Add Note (Update Book)</h2>
+        <form id="update-form">
+            <input type="number"    id="update-isbn" placeholder="ISBN to Update" required>
+            <input type="text"      id="update-note" placeholder="New Note">
+            <button type="submit">Update Book</button>
+        </form>
+    </div>
+    
+    <!-- Delete Book Form -->
+    <div id="delete-book">
+        <h2>Delete Book</h2>
+        <form id="delete-form">
+            <input type="number"    id="delete-isbn" placeholder="ISBN to Delete" required>
+            <button type="submit">Delete Book</button>
+        </form>
+    </div>
+    
+    <script src="js/app.js"></script>
+</body>
+</html>
