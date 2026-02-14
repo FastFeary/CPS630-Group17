@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Add a Class</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <div>
+        <h1 class="site-title">Add a Class</h1>
+        <p class="site-subtitle">Create a new class card for the community center.</p>
+      </div>
+      <nav class="nav">
+        <a href="/">Classes</a>
+        <a href="/booked.html">Booked</a>
+        <a href="/add-Class.html">Add Class</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="panel">
+      <form id="addClassForm" class="form">
+        <label class="field">
+          <span class="label">Title</span>
+          <input id="title" name="title" type="text" placeholder="e.g., Kids Martial Arts" required />
+        </label>
+
+        <label class="field">
+          <span class="label">Description</span>
+          <textarea id="description" name="description" rows="4" placeholder="Describe what the class is about..." required></textarea>
+        </label>
+
+        <div class="form-actions">
+          <button class="button" type="submit">Add Class</button>
+          <a class="button secondary" href="/">Cancel</a>
+        </div>
+
+        <p id="status" class="muted" aria-live="polite"></p>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById('addClassForm');
+    const statusEl = document.getElementById('status');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      statusEl.textContent = '';
+
+      const payload = {
+        title: document.getElementById('title').value.trim(),
+        description: document.getElementById('description').value.trim(),
+        image: '/images/placeholder.jpg',
+      };
+
+      try {
+        const res = await fetch('/api/classes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          statusEl.textContent = data?.error || 'Failed to add class.';
+          statusEl.className = 'error';
+          return;
+        }
+
+        window.location.href = '/';
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = 'Network error while adding class.';
+        statusEl.className = 'error';
+      }
+    });
+  </script>
+</body>
+
+</html>

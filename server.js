@@ -6,7 +6,7 @@ const path = require('path');
 const fs = require('fs');
 
 const PORT = 8080;
-const dataPath = path.join(__dirname, 'data', 'items.json');
+const dataPath = path.join(__dirname, 'data', 'classes.json');
 app.use(express.json());
 
 // placeholders for now
@@ -27,51 +27,66 @@ app.get('/', (req, res) => {
 });
 
 // REST API routes 
-// GET = retreive all items
-app.get('/api/items', (req, res) => {
-    const items = readItems();
-    res.status(200).json(items);
-    console.log(items);  
+// GET = retreive all classes
+app.get('/api/classes', (req, res) => {
+    const classes = readClasses();
+    res.status(200).json(classes);
+    console.log(classes);
 });
 
-// POST = add an new item
-app.post('/api/items', express.json(), (req, res) => {
-    const items = readItems();                              // I added this
-    const newItem = req.body;
-    if (newItem && newItem.name && newItem.description) {
+// GET = retreive a single class by id
+app.get('/api/classes/:id', (req, res) => {
+    const classes = readClasses();
+    const classId = parseInt(req.params.id);
+    const foundClass = classes.find(c => c.id === classId);
+    if (foundClass) {
+        res.status(200).json(foundClass);
+    } else {
+        res.status(404).json({ error: 'Class not found' });
+    }
+});
+
+// POST = add an new class
+app.post('/api/classes', express.json(), (req, res) => {
+    const classes = readClasses();
+    const newClass = req.body;
+    if (newClass && newClass.title && newClass.description) {
+        if (!newClass.image) {
+            newClass.image = '/images/placeholder.jpg';
+        }
         /* if (!newItem.id) {
             newItem.id = nextId++;  // auto-generate ID
         }
         */
 
-        let nextId = 1;                                         // I added this
-        if (items.length > 0) {
-            nextId = items[items.length - 1].id + 1;
+        let nextId = 1;
+        if (classes.length > 0) {
+            nextId = classes[classes.length - 1].id + 1;
         }
-        newItem.id = nextId;
+        newClass.id = nextId;
 
-        items.push(newItem);
-        writeItems(items);                                  // I added this
+        classes.push(newClass);
+        writeClasses(classes);
         // const items = readItems();
         // res.status(200).json(items);
-        res.status(201).json(newItem);                      // I added this
+        res.status(201).json(newClass);
     } 
     else {
-        res.status(400).json({ error: 'Invalid item data' });
+        res.status(400).json({ error: 'Invalid class data' });
     }
 });
 
-// DELETE = remove item by id
-app.delete('/api/items/:id', (req, res) => {
-    const items = readItems();                                  // I added this
-    const itemId = parseInt(req.params.id);
-    const itemIndex = items.findIndex(i => i.id === itemId);
-    if (itemIndex !== -1) {
-        const deletedItem = items.splice(itemIndex, 1);
-        writeItems(items);                                      // I added this
-        res.status(200).json(deletedItem[0]);
+// DELETE = remove class by id
+app.delete('/api/classes/:id', (req, res) => {
+    const classes = readClasses();
+    const classId = parseInt(req.params.id);
+    const classIndex = classes.findIndex(c => c.id === classId);
+    if (classIndex !== -1) {
+        const deletedClass = classes.splice(classIndex, 1);
+        writeClasses(classes);
+        res.status(200).json(deletedClass[0]);
     } else {
-        res.status(404).json({ error: 'Item not found' });
+        res.status(404).json({ error: 'Class not found' });
     }
 });
 
@@ -81,11 +96,11 @@ app.listen(PORT, () => {
 });
 
 // Helper functions:
-function readItems() {
+function readClasses() {
     const data = fs.readFileSync(dataPath);
     return JSON.parse(data);
 }
 
-function writeItems(items) {
-    fs.writeFileSync(dataPath, JSON.stringify(items, null, 2));
+function writeClasses(classes) {
+    fs.writeFileSync(dataPath, JSON.stringify(classes, null, 2));
 }

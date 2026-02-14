@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Community Center Classes</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <div>
+        <h1 class="site-title">Community Center Classes</h1>
+        <p>View a wide range of classes being offered !</p>
+      </div>
+      <nav class="nav">
+        <a href="/">Classes</a>
+        <a href="/booked.html">Booked</a>
+        <a href="/add-Class.html">Add Class</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section>
+      <div class="section-head">
+        <h2>Available Classes</h2>
+        <p>Tap “Book” to save a class to your booked list.</p>
+      </div>
+
+      <div id="classesGrid" class="grid"></div>
+    </section>
+  </main>
+
+  <script>
+    const STORAGE_KEY = 'bookedClassIds';
+
+    function getBookedIds() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        let parsed = [];
+        if (raw) {
+          parsed = JSON.parse(raw);
+        }
+        if (Array.isArray(parsed)) {
+          return parsed;
+        } else {
+          return [];
+        }
+      } catch {
+        return [];
+      }
+    }
+
+    function setBookedIds(ids) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+    }
+
+    function isBooked(id) {
+      return getBookedIds().includes(id);
+    }
+
+    function bookClass(id) {
+      const ids = getBookedIds();
+      if (!ids.includes(id)) {
+        ids.push(id);
+        setBookedIds(ids);
+      }
+      renderClasses(window.__classes || []);
+    }
+
+    async function deleteClass(id) {
+      try {
+        const res = await fetch(`/api/classes/${id}`, { method: 'DELETE' });
+        if (!res.ok) {
+          console.error('Failed to delete class');
+          return;
+        }
+
+        const ids = getBookedIds().filter((x) => x !== id);
+        setBookedIds(ids);
+
+        await loadClasses();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function renderClasses(classes) {
+      window.__classes = classes;
+      const grid = document.getElementById('classesGrid');
+      grid.innerHTML = '';
+
+      classes.forEach((c) => {
+        const card = document.createElement('article');
+        card.className = 'card';
+
+        const booked = isBooked(c.id);
+
+        let disabledAttr = '';
+        let buttonLabel = 'Book';
+        if (booked) {
+          disabledAttr = 'disabled';
+          buttonLabel = 'Booked';
+        }
+
+        card.innerHTML = `
+          <div class="card-image">
+            <img src="${c.image}" alt="${c.title}" loading="lazy" />
+          </div>
+          <div class="card-body">
+            <h3 class="card-title">${c.title}</h3>
+            <p class="card-description">${c.description}</p>
+            <div class="card-actions">
+              <button class="button" ${disabledAttr} data-id="${c.id}">
+                ${buttonLabel}
+              </button>
+              <button class="button danger" data-delete-id="${c.id}">
+                Delete class
+              </button>
+            </div>
+          </div>
+        `;
+
+        const btn = card.querySelector('button');
+        btn.addEventListener('click', () => bookClass(c.id));
+
+        const deleteBtn = card.querySelector('button[data-delete-id]');
+        deleteBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          deleteClass(c.id);
+        });
+
+        grid.appendChild(card);
+      });
+    }
+
+    async function loadClasses() {
+      const res = await fetch('/api/classes');
+      const classes = await res.json();
+      renderClasses(classes);
+    }
+
+    loadClasses().catch((err) => {
+      console.error(err);
+      const grid = document.getElementById('classesGrid');
+      grid.innerHTML = '<p class="error">Failed to load classes.</p>';
+    });
+  </script>
+</body>
+
+</html>

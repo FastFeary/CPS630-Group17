@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "title": "Yoga lessons",
+    "description": "Start your day with a gentle vinyasa flow focused on mobility, balance, and breathwork. All levels welcome.",
+    "image": "/images/yoga.jpg"
+  },
+  {
+    "id": 2,
+    "title": "Community Basketball",
+    "description": "Learn dribbling, passing, and shooting fundamentals in a fun, supportive gym session.",
+    "image": "/images/basketball.jpg"
+  },
+  {
+    "id": 3,
+    "title": "Clay Workshop",
+    "description": "Hands-on clay making: pinch pots, coils, and simple glazing techniques. Materials provided.",
+    "image": "/images/clay.jpg"
+  },
+  {
+    "id": 4,
+    "title": "Beginner Cooking Workshop",
+    "description": "Build confidence in the kitchen with easy, budget-friendly recipes you can repeat at home.",
+    "image": "/images/cooking.jpg"
+  }
+]
