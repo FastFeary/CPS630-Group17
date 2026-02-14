@@ -6,7 +6,7 @@ const path = require('path');
 const fs = require('fs');
 
 const PORT = 8080;
-const dataPath = path.join(__dirname, 'data', 'classes.json');
+const dataPath = path.join(__dirname, 'data/classes.json');
 app.use(express.json());
 
 // placeholders for now
@@ -88,6 +88,11 @@ app.delete('/api/classes/:id', (req, res) => {
     } else {
         res.status(404).json({ error: 'Class not found' });
     }
+});
+
+// Catch all route: reroute back to homepage
+app.get(/^(?!\/api\/).*/, (req, res) => {
+    res.sendFile(path.join(__dirname, '/views/index.html'));
 });
 
 // Starts server

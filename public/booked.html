@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Booked Classes</title>
   <link rel="stylesheet" href="/css/style.css" />
+  <link rel="icon" href="/images/favicon.ico" type="image/x-icon" />
 </head>
 
 <body>
@@ -34,85 +35,7 @@
     </section>
   </main>
 
-  <script>
-    const STORAGE_KEY = 'bookedClassIds';
-
-    function getBookedIds() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        let parsed = [];
-        if (raw) {
-          parsed = JSON.parse(raw);
-        }
-        if (Array.isArray(parsed)) {
-          return parsed;
-        } else {
-          return [];
-        }
-      } catch {
-        return [];
-      }
-    }
-
-    function setBookedIds(ids) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
-    }
-
-    function unbookClass(id) {
-      const ids = getBookedIds().filter((x) => x !== id);
-      setBookedIds(ids);
-      renderBooked(window.__classes || []);
-    }
-
-    function renderBooked(classes) {
-      window.__classes = classes;
-      const grid = document.getElementById('bookedGrid');
-      const bookedIds = getBookedIds();
-      const booked = classes.filter((c) => bookedIds.includes(c.id));
-
-      if (booked.length === 0) {
-        grid.innerHTML = '<p class="muted">No booked classes yet. Go to the Classes page to book one.</p>';
-        return;
-      }
-
-      grid.innerHTML = '';
-
-      booked.forEach((c) => {
-        const card = document.createElement('article');
-        card.className = 'card';
-
-        card.innerHTML = `
-          <div class="card-image">
-            <img src="${c.image}" alt="${c.title}" loading="lazy" />
-          </div>
-          <div class="card-body">
-            <h3 class="card-title">${c.title}</h3>
-            <p class="card-description">${c.description}</p>
-            <div class="card-actions">
-              <button class="button danger" data-id="${c.id}">Delete booking</button>
-            </div>
-          </div>
-        `;
-
-        const btn = card.querySelector('button');
-        btn.addEventListener('click', () => unbookClass(c.id));
-
-        grid.appendChild(card);
-      });
-    }
-
-    async function load() {
-      const res = await fetch('/api/classes');
-      const classes = await res.json();
-      renderBooked(classes);
-    }
-
-    load().catch((err) => {
-      console.error(err);
-      const grid = document.getElementById('bookedGrid');
-      grid.innerHTML = '<p class="error">Failed to load booked classes.</p>';
-    });
-  </script>
+  <script src="/js/app.js"></script>
 </body>
 
 </html>

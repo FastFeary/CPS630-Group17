@@ -56,6 +56,11 @@ body {
 }
 
 
+.muted {
+  white-space: nowrap;
+}
+
+
 .error {
   color: #b91c1c;
   margin: 10px 0 0;
