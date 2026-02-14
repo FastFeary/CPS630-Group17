@@ -33,9 +33,9 @@ The user may also go under "add class" in the top right, and after filling out t
 Classes can also be deleted altogether through "delete class" under the current available classes, which after that will not be available until they add more classes to the website.
 
 ## Reflection
-Submitted material includes the Node.js server, one JSON file with a list of items/classes each with an id, title, description and image. There are also the HTML/CSS files for available classes, current bookings, and creating classes.
+Submitted material includes the Node.js server, one JSON file with a list of items/classes each with an id, title, description and image. There are also the HTML/CSS files for available classes, current bookings, and creating classes. 
 
-The main functions lie in server.js, with REST API routes providing interaction between the client and the server: GET may either retrieve all classes or a single class by ID, POST adds a new class to the JSON file, and DELETE removes classes by ID.
+The main functions lie in server.js, with REST API routes providing interaction between the client and the server: GET may either retrieve all classes or a single class by ID, POST adds a new class to the JSON file, and DELETE removes classes by ID. In app.js, it handles the application's functions of the REST API routes.
 
 In terms of fundamental challenges, the one which came forefront were the get, post and delete functions. Once the basic logic was implemented, a minor success came in using appropriate status codes standard for web applications, such as 200 for a success and 404 for a failure in our REST routes. 
 
