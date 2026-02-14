@@ -15,9 +15,9 @@ This system is fitted for future extensions and iterations, such as the function
 ## Documentation
 After unzipping the project and opening it in Visual Studio Code, open a terminal and run the command in order to use Express commands:
 
-``
+```
 npm i
-``
+```
 Run the server using the Express command in the same terminal:
 ```
 node server.js
