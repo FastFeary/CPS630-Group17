@@ -37,7 +37,7 @@ function displayBooks(books, containerId) {
     let bookHTMlStr = '';
     books.map(book => {
         const imageName = (book.hasImage ? book.isbn : 'PlaceholderBook') + '.jpg';
-        bookHTMlStr += `<img src="/images/books/${imageName}" height="100"><p>ISBN: ${book.isbn}, Title: ${book.title}, Author: ${book.author}, Year: ${book.year}, Note: ${book.note}</p>`
+        bookHTMlStr += `<img src="/images/books/${imageName}" height="100"><p>ID: ${book.id}, Title: ${book.name}, Author: ${book.description}</p>`
     });
     container.innerHTML = bookHTMlStr;
 }
