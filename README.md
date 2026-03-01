@@ -1,28 +1,21 @@
-# **CPS630 Group 17 Assignment 1**
-    Contributors: 
-    - Freddy Koehlmann (501050151) 
-    - Abdullah Hachimi (501178743)
-    - Naureen Hossain (501239728)
-    - Celestino Gellido (501103802)
+# Lesson Connecting React and REST API
 
-## Overview
-This web application was designed with basic functionalities of Express servers, with web pages and routes, and a REST API handling interactions between the client and the server.
-
-Future capabilities building on the foundation depend on particularly careful consideration of what can be agreed to be a viable function for a web application. Specifically one that can evolve clearly with each iteration in future assignments, which is a pivotal component of web development.
-
-## Documentation (will fill rest out after testing)
-Open a terminal in Visual Studio Code with the unzipped project, and run the server using the Express command:
-```
-node server.js
-```
-The site is run on localhost 8080, so once the command runs the user should access it in their preferred search engine by putting the address below in the search bar:
-```
-localhost:8080
-```
-
-## Reflection (will fill rest out after testing)
-Submitted material includes the Node.js server, one JSON file with a list of items each with an id, name, and description.
-
-The main functions lie in server.js 
-
-In terms of fundamental challenges, the one which stood the tallest was the get, post and delete functions. Once the basic logic was implemented, a minor success came in using appropriate status codes standard for web applications, such as 200 for a success and 404 for a failure in our REST routes. 
+- Discuss changes from past project
+  - Seperated project into seperate frontend and backend node.js projects
+  - Note that we need two terminal windows to run both processes simultaneously
+  - the REST API has been slightly changed, but mostly the same
+  - the frontend has been drastically changed with React components and moving app.js functionality to each individual component
+- Let's run the project!
+- Let's add some search functionality
+  - add rest API on server.js
+  - create new React component
+- Let's add a Mongo Database
+  - Make sure MongoDB is installed and running
+  - Let's use Mongo Compass to explore what is here
+  - ```cd frontend && npm install```
+  - ```cd backend && npm install```
+  - install mongoose in the backend - ```npm install mongoose```
+  - create a "Book" schema and model
+  - Connect to Mongo Database in server.js (under the "backend" folder)
+  - let's create a function to add some test books to our database
+  - TODO: Change all the CRUD functions to connect to the database, rather than the JSON array.

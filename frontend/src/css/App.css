@@ -1,0 +1,50 @@
+body {
+    font-family: 'Roboto', sans-serif;
+    font-size: 16px;
+    min-height: 100vh;
+    background-color: darkblue;
+    color: whitesmoke;
+    padding: 20px;
+}
+
+h1 {
+    text-align: center;
+}
+
+div {
+    margin-bottom: 20px;
+    padding: 10px;
+    border: 1px solid whitesmoke;
+    border-radius: 5px;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+input {
+    padding: 5px;
+}
+
+button {
+    padding: 5px 10px;
+    background-color: lightblue;
+    color: darkblue;
+    border: none;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: whitesmoke;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+li {
+    margin-bottom: 5px;
+}
