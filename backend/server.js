@@ -18,10 +18,11 @@ mongoose.connect(dbURL);
 
 const db = mongoose.connection;
 db.on('error', function(e) {
-    comnsole.log('error connecting:' + e);
+    console.log('error connecting:' + e);
 });
 db.on('open', function() {
     console.log('database connected!');
+    addTestBooksToMongoDB();
 });
 
 //The International Standard Book Number (ISBN) is a numeric commercial book identifier that is intended to be unique.
@@ -37,26 +38,31 @@ let book_library = [
 ];
 
 //!! let's add a function called addTestBooksToMongoDB()
-//we will add soem test data to the database (if there is not already data in the database)
+//we will add some test data to the database (if there is not already data in the database)
 async function addTestBooksToMongoDB() {
-    const bookCount = await Book.countDocuments();
+    try {
+        const bookCount = await Book.countDocuments();
 
-    if (bookCount === 0) {
-        console.log('Adding test books to db ...');
+        if (bookCount === 0) {
+            console.log('Adding test books to db ...');
 
-        book_library.forEach(book => {
-            const newBook = new Book(book);
-            newBook.save()
-                .then(() => console.log('Book added with ISBN' + book.isbn))
-                .catch(err => console.error('Error adding book with ISBN' + book.isbn + ' ' + err));
-        });
-    }
-    else {
-        console.log('Boosk already exist. Not adding test books.');
-        return;
+            const savePromises = book_library.map(book => {
+                const newBook = new Book(book);
+                return newBook.save()
+                    .then(() => console.log('Book added with ISBN ' + book.isbn))
+                    .catch(err => console.error('Error adding book with ISBN ' + book.isbn + ': ' + err));
+            });
+
+            await Promise.all(savePromises);
+            console.log('All test books added successfully!');
+        }
+        else {
+            console.log('Books already exist. Not adding test books.');
+        }
+    } catch (err) {
+        console.error('Error in addTestBooksToMongoDB: ' + err);
     }
 }
-addTestBooksToMongoDB();
 
 //don't need this as our vite server is serving content.
 // //we will only have one web page - maybe we can add more later
@@ -73,9 +79,14 @@ addTestBooksToMongoDB();
 /******** READ **********/
 /************************/
 //get all books
-app.get('/api/books', (req, res) => {
-    res.json(book_library);
-    console.log(book_library);  //want to see results for debugging
+app.get('/api/books', async (req, res) => {
+    try {
+        const books = await Book.find();
+        res.json(books);
+        console.log('Retrieved ' + books.length + ' books from database');  //want to see results for debugging
+    } catch (err) {
+        res.status(500).json({ error: 'Error retrieving books: ' + err });
+    }
 });
 
 /************************/
@@ -84,15 +95,19 @@ app.get('/api/books', (req, res) => {
 /************************/
 //get book by ISBN (unique id)
 //In Express.js route definitions, the colon (:) prefix indicates a route parameter (also called a path parameter)
-app.get('/api/books/isbn/:isbn', (req, res) => {
-    //compare ISBN as string to avoid precision loss with large numbers
-    const isbn = req.params.isbn;
-    //array.find() returns the first matching element (or undefined if none found)
-    const book = book_library.find(b => b.isbn.toString() === isbn);
-    if (book) {
-        res.status(200).json(book); //status code 200 = OK
-    } else {
-        res.status(404).json({ error: "Book not found" });  //status 404 code = NOT FOUND
+app.get('/api/books/isbn/:isbn', async (req, res) => {
+    try {
+        //convert ISBN to number to match the database type
+        const isbn = Number(req.params.isbn);
+        //findOne() returns the first matching document (or null if none found)
+        const book = await Book.findOne({ isbn: isbn });
+        if (book) {
+            res.status(200).json(book); //status code 200 = OK
+        } else {
+            res.status(404).json({ error: "Book not found" });  //status 404 code = NOT FOUND
+        }
+    } catch (err) {
+        res.status(500).json({ error: 'Error retrieving book: ' + err });
     }
 });
 
@@ -104,21 +119,23 @@ app.get('/api/books/isbn/:isbn', (req, res) => {
 //ideally this search would be more flexible (e.g., partial match) but for simplicity we are doing an exact match here
 //Consider what other cases to be checked and status codes might be appropriate in some of these functions ...
 //Using query parameter to avoid route conflicts: /api/books/search?author=AuthorName
-app.get('/api/books/search', (req, res) => {
-    const bookAuthor = req.query.author;
-    
-    if (!bookAuthor) {
-        return res.status(400).json({ error: "Author query parameter is required" });
-    }
+app.get('/api/books/search', async (req, res) => {
+    try {
+        const bookAuthor = req.query.author;
+        
+        if (!bookAuthor) {
+            return res.status(400).json({ error: "Author query parameter is required" });
+        }
 
-    //remember === in JavaScript is a strict equality operator that checks for both value and type equality.
-    //both lowercase to reduce case sensitivity check issues (still does not handle partial matches or special characters)
-    //array.filter() returns an array of all matching elements
-    const books = book_library.filter(b => b.author.toLowerCase() === bookAuthor.toLowerCase());
-    if (books.length > 0) {
-        res.status(200).json(books);
-    } else {
-        res.status(404).json({ error: "Book(s) not found" });
+        //use regex for case-insensitive search
+        const books = await Book.find({ author: { $regex: bookAuthor, $options: 'i' } });
+        if (books.length > 0) {
+            res.status(200).json(books);
+        } else {
+            res.status(404).json({ error: "Book(s) not found" });
+        }
+    } catch (err) {
+        res.status(500).json({ error: 'Error searching books: ' + err });
     }
 });
 
@@ -127,18 +144,23 @@ app.get('/api/books/search', (req, res) => {
 /******* CREATE *********/
 /************************/
 //create new book
-app.post('/api/books', express.json(), (req, res) => {
-    const newBook = req.body;
-    if (newBook && newBook.title && newBook.author && newBook.year) {
+app.post('/api/books', express.json(), async (req, res) => {
+    try {
+        const newBook = req.body;
+        if (newBook && newBook.title && newBook.author && newBook.year) {
 
-        if (!newBook.hasImage) {
-            newBook.hasImage = false; //default value
+            if (!newBook.hasImage) {
+                newBook.hasImage = false; //default value
+            }
+
+            const book = new Book(newBook);
+            const savedBook = await book.save();
+            res.status(201).json(savedBook);
+        } else {
+            res.status(400).json({ error: "Invalid book data" });
         }
-
-        book_library.push(newBook);
-        res.status(201).json(newBook);
-    } else {
-        res.status(400).json({ error: "Invalid book data" });
+    } catch (err) {
+        res.status(500).json({ error: 'Error creating book: ' + err });
     }
 });
 
@@ -147,17 +169,24 @@ app.post('/api/books', express.json(), (req, res) => {
 /******* UPDATE *********/
 /************************/
 //add note / update book by unique id, i.e., ISBN
-app.patch('/api/books/isbn/:isbn', express.json(), (req, res) => {
-    console.log("PATCH request received");
+app.patch('/api/books/isbn/:isbn', express.json(), async (req, res) => {
+    try {
+        console.log("PATCH request received");
 
-    const bookId = req.params.isbn;
-    const updatedBook = req.body;
-    const bookIndex = book_library.findIndex(b => b.isbn.toString() === bookId);
-    if (bookIndex !== -1) {
-        book_library[bookIndex].note = updatedBook.note;
-        res.status(200).json(book_library[bookIndex]);
-    } else {
-        res.status(404).json({ error: "Book not found" });
+        const bookId = Number(req.params.isbn);
+        const updatedBook = req.body;
+        const book = await Book.findOneAndUpdate(
+            { isbn: bookId },
+            { note: updatedBook.note },
+            { new: true }
+        );
+        if (book) {
+            res.status(200).json(book);
+        } else {
+            res.status(404).json({ error: "Book not found" });
+        }
+    } catch (err) {
+        res.status(500).json({ error: 'Error updating book: ' + err });
     }
 }); 
 
@@ -166,14 +195,17 @@ app.patch('/api/books/isbn/:isbn', express.json(), (req, res) => {
 /******* DELETE *********/
 /************************/
 //delete by unique id, i.e., ISBN (can only delete one)
-app.delete('/api/books/isbn/:isbn', (req, res) => {
-    const bookId = req.params.isbn;
-    const bookIndex = book_library.findIndex(b => b.isbn.toString() === bookId);
-    if (bookIndex !== -1) {
-        book_library.splice(bookIndex, 1);
-        res.status(204).send();
-    } else {
-        res.status(404).json({ error: "Book not found" });
+app.delete('/api/books/isbn/:isbn', async (req, res) => {
+    try {
+        const bookId = Number(req.params.isbn);
+        const book = await Book.findOneAndDelete({ isbn: bookId });
+        if (book) {
+            res.status(204).send();
+        } else {
+            res.status(404).json({ error: "Book not found" });
+        }
+    } catch (err) {
+        res.status(500).json({ error: 'Error deleting book: ' + err });
     }
 });
 

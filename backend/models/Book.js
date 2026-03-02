@@ -2,10 +2,9 @@ const mongoose = require('mongoose');
 
 const BookSchema = new mongoose.Schema({
     isbn: {
-        type:       String,
+        type:       Number,
         unique:     true,
-        required:   true,
-        trim:       true
+        required:   true
     },
     hasImage: {
         type:       Boolean,
