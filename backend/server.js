@@ -123,13 +123,14 @@ app.get('/api/books/isbn/:isbn', async (req, res) => {
 app.get('/api/books/search', async (req, res) => {
     try {
         const bookAuthor = req.query.author;
+        const bookFilter = { author: bookAuthor };
         
         if (!bookAuthor) {
             return res.status(400).json({ error: "Author query parameter is required" });
         }
 
         //use regex for case-insensitive search
-        const books = await Book.find({ author: { $regex: bookAuthor, $options: 'i' } });
+        const books = await booksColl.find(bookFilter).toArray();
         if (books.length > 0) {
             res.status(200).json(books);
         } else {
