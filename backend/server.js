@@ -17,6 +17,7 @@ const dbURL = `mongodb://${DATABASE_HOST}:${DATABASE_PORT}/book_library`;
 mongoose.connect(dbURL);
 
 const db = mongoose.connection;
+const booksColl = db.collection("books");
 db.on('error', function(e) {
     console.log('error connecting:' + e);
 });
@@ -168,18 +169,23 @@ app.post('/api/books', express.json(), async (req, res) => {
 /******* SERVER *********/
 /******* UPDATE *********/
 /************************/
-//add note / update book by unique id, i.e., ISBN
+//update book by ISBN(unique)
 app.patch('/api/books/isbn/:isbn', express.json(), async (req, res) => {
     try {
         console.log("PATCH request received");
 
-        const bookId = Number(req.params.isbn);
-        const updatedBook = req.body;
-        const book = await Book.findOneAndUpdate(
-            { isbn: bookId },
-            { note: updatedBook.note },
-            { new: true }
-        );
+        const bookISBN = Number(req.params.isbn);
+        const bookFilter = { isbn: bookISBN };
+        
+        const newNote = req.body.note;
+        const updateNote = {
+            $set: {
+                note: newNote
+            },
+        };
+
+
+        const book = await booksColl.updateOne(bookFilter, updateNote);
         if (book) {
             res.status(200).json(book);
         } else {
@@ -188,6 +194,26 @@ app.patch('/api/books/isbn/:isbn', express.json(), async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: 'Error updating book: ' + err });
     }
+
+
+    // try {
+    //     console.log("PATCH request received");
+
+    //     const bookId = Number(req.params.isbn);
+    //     const updatedBook = req.body;
+    //     const book = await Book.findOneAndUpdate(
+    //         { isbn: bookId },
+    //         { note: updatedBook.note },
+    //         { new: true }
+    //     );
+    //     if (book) {
+    //         res.status(200).json(book);
+    //     } else {
+    //         res.status(404).json({ error: "Book not found" });
+    //     }
+    // } catch (err) {
+    //     res.status(500).json({ error: 'Error updating book: ' + err });
+    // }
 }); 
 
 /************************/
