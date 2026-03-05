@@ -223,8 +223,10 @@ app.patch('/api/books/isbn/:isbn', express.json(), async (req, res) => {
 //delete by unique id, i.e., ISBN (can only delete one)
 app.delete('/api/books/isbn/:isbn', async (req, res) => {
     try {
-        const bookId = Number(req.params.isbn);
-        const book = await Book.findOneAndDelete({ isbn: bookId });
+        const bookISBN = Number(req.params.isbn);
+        const bookFilter= { isbn: bookISBN };
+
+        const book = booksColl.deleteOne(bookFilter);
         if (book) {
             res.status(204).send();
         } else {
