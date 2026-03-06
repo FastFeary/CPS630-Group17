@@ -50,7 +50,6 @@ function NewBook({ onBookAdded }) {
   return (
     <>
       <div id="new-form">
-        <h2>Add New Book</h2>
         <form onSubmit={handleSubmit}>
           <input 
             type="text" 
