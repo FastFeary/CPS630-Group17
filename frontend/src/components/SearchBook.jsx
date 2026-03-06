@@ -43,14 +43,13 @@ function SearchBook() {
 
   return (
     <>
-      <div id="search-book">
+      <div id="search-book" className="search-card">
         <h2>Search Books by Author</h2>
         <form onSubmit={handleSubmit}>
           <input 
             type="text" 
             placeholder="Enter author name" 
             value={author}
-            //onChange={(e) => setAuthor(e.target.value)} //this is a more concise way to write the onChange handler, but we don't want teh results to show until we submit the form
             onChange={(e) => {
               setAuthor(e.target.value);
               setSearched(false);
@@ -58,24 +57,23 @@ function SearchBook() {
           />
           <button type="submit">Search</button>
         </form>
-        
-        {/* this is a shorthand way of saying if searched is true, render the following block */
-        /* is a short form of a ternary operator when you only care about the "true" case */
-        /* instead of writing searched ? (...) : null we can just write searched && (...) */}
+
         {searched && (
           <>
             {books.length > 0 ? (
               <div id="search-results">
-                <h3>Search Results for "{author}"</h3>
                 {books.map(book => {
                   const imageName = (book.hasImage ? book.isbn : 'PlaceholderBook') + '.jpg';
                   return (
-                    <div key={book.isbn}>
-                      <img src={`/images/books/${imageName}`} height="100" alt={book.title} />
-                      <p>
-                        ISBN: {book.isbn}, Title: {book.title}, Author: {book.author}, 
-                        Year: {book.year}, Note: {book.note}
-                      </p>
+                    <div key={book.isbn} className="book-card">
+                      <img src={`/images/books/${imageName}`} height="120" alt={book.title} />
+                      <div className="book-info">
+                        <p><strong>{book.title}</strong></p>
+                        <p>Author: {book.author}</p>
+                        <p>ISBN: {book.isbn}</p>
+                        <p>Year: {book.year}</p>
+                        {book.note && <p>Note: {book.note}</p>}
+                      </div>
                     </div>
                   );
                 })}

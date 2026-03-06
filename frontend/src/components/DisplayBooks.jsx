@@ -32,17 +32,20 @@ function DisplayBooks({ refreshTrigger }) {
 
   return (
     <>
-      <h2>Display All Books</h2>
+      <h2>Browse Books</h2>
       <div id="books-display">
         {books.map(book => {
           const imageName = (book.hasImage ? book.isbn : 'PlaceholderBook') + '.jpg';
           return (
-            <div key={book.isbn}>
-              <img src={`/images/books/${imageName}`} height="100" alt={book.title} />
-              <p>
-                ISBN: {book.isbn}, Title: {book.title}, Author: {book.author}, 
-                Year: {book.year}, Note: {book.note}
-              </p>
+            <div key={book.isbn} className="book-card">
+              <img src={`/images/books/${imageName}`} height="120" alt={book.title} />
+              <div className="book-info">
+                <p><strong>{book.title}</strong></p>
+                <p>Author: {book.author}</p>
+                <p>ISBN: {book.isbn}</p>
+                <p>Year: {book.year}</p>
+                {book.note && <p>Note: {book.note}</p>}
+              </div>
             </div>
           );
         })}

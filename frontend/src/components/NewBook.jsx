@@ -53,7 +53,7 @@ function NewBook({ onBookAdded }) {
         <h2>Add New Book</h2>
         <form onSubmit={handleSubmit}>
           <input 
-            type="number" 
+            type="text" 
             name="isbn" 
             placeholder="ISBN" 
             value={formData.isbn}

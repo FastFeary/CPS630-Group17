@@ -32,7 +32,7 @@ function DeleteBook({ onBookDeleted }) {
         <h2>Delete Book</h2>
         <form onSubmit={handleSubmit}>
           <input 
-            type="number" 
+            type="text" 
             placeholder="ISBN to Delete" 
             value={isbn}
             onChange={(e) => setIsbn(e.target.value)}

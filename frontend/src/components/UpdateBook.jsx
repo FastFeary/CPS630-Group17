@@ -39,7 +39,7 @@ function UpdateBook({ onBookUpdated }) {
         <h2>Add Note (Update Book)</h2>
         <form onSubmit={handleSubmit}>
           <input 
-            type="number" 
+            type="text" 
             placeholder="ISBN to Update" 
             value={isbn}
             onChange={(e) => setIsbn(e.target.value)}
