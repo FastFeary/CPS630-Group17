@@ -1,12 +1,18 @@
 import { useState } from 'react';
 
-function UpdateBook({ onBookUpdated }) {
+function UpdateBook({ onBookUpdated, authToken }) {
   const [isbn, setIsbn] = useState('');
   const [note, setNote] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+        
+    //!! Class 3: block protected action if not logged in
+    if (!authToken) {
+      alert('Please login first to update books.');
+      return;
+    }
+
     const updatedBook = {};
     if (note) {
       updatedBook.note = note;
@@ -15,7 +21,11 @@ function UpdateBook({ onBookUpdated }) {
     try {
       const response = await fetch(`/api/books/isbn/${isbn}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`
+        },
+
         body: JSON.stringify(updatedBook)
       });
       const result = await response.json();

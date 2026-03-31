@@ -6,6 +6,7 @@ import SearchBook from './components/SearchBook';
 import NewBook from './components/NewBook';
 import UpdateBook from './components/UpdateBook';
 import DeleteBook from './components/DeleteBook';
+import Login from './components/Login';
 
 import './css/App.css';
 
@@ -15,9 +16,16 @@ function App() {
   const handleRefresh = () => {
     setRefreshTrigger(prev => !prev);
   };
+  //store auth token in app state
+  const [authToken, setAuthToken] = useState('');
 
   return (
-    <Router>
+    <>
+      <Login authToken={authToken} setAuthToken={setAuthToken} />
+      {/* //!! Class 3: show app features only when user is logged in */}
+      {authToken && (
+        <>
+          <Router>
       {/* Navigation Links */}
       <h1>Online Library System</h1>
       <nav>
@@ -53,6 +61,9 @@ function App() {
       } />
     </Routes>
     </Router>
+        </>
+      )}
+    </>
   );
 }
 

@@ -9,6 +9,11 @@ const PORT          = 8080;
 const DATABASE_HOST = 'localhost';
 const DATABASE_PORT = 27017;
 
+//Baisc Auth Values from Node environment variables
+const AUTH_USERNAME = process.env.AUTH_USERNAME;
+const AUTH_PASSWORD = process.env.AUTH_PASSWORD;
+const AUTH_TOKEN = process.env.AUTH_TOKEN;
+
 //Enable CORS for frontend requests
 app.use(cors());
 
@@ -65,6 +70,23 @@ async function addTestBooksToMongoDB() {
     }
 }
 
+function requireAuth(req, res, next) {
+    const authHeader = req.headers.authorization;
+
+    //we are expecting the auth header to be in the format "Bearer <token>", so we check for that and extract the token
+    //"Bearer " is part of the HTTP standard for authorization headers and indicates that the client is sending a token for authentication.
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Authorization header missing or invalid' });
+    }
+
+    const token = authHeader.substring(7); //just extract token part after "Bearer "
+    if (token !== AUTH_TOKEN) {
+        return res.status(401).json({ error: 'Invalid auth token' });
+    }
+
+    next();
+}
+
 //don't need this as our vite server is serving content.
 // //we will only have one web page - maybe we can add more later
 // app.get('/', (req, res) => {
@@ -74,6 +96,28 @@ async function addTestBooksToMongoDB() {
 /*************************************************/
 /********* Defining (CRUD) API routes ************/
 /*************************************************/
+
+/************************/
+/******* SERVER *********/
+/******* AUTH ***********/
+/************************/
+//Simple login route that returns a static demo token
+app.post('/api/auth/login', express.json(), (req, res) => {
+    const { username, password } = req.body || {};
+
+    if (!username || !password) {
+        return res.status(400).json({ error: 'Username and password are required' });
+    }
+
+    if (username === AUTH_USERNAME && password === AUTH_PASSWORD) {
+        return res.status(200).json({
+            message: 'Login successful',
+            token: AUTH_TOKEN
+        });
+    }
+
+    return res.status(401).json({ error: 'Invalid username or password' });
+});
 
 /************************/
 /******* SERVER *********/
@@ -146,7 +190,7 @@ app.get('/api/books/search', async (req, res) => {
 /******* CREATE *********/
 /************************/
 //create new book
-app.post('/api/books', express.json(), async (req, res) => {
+app.post('/api/books', requireAuth, express.json(), async (req, res) => {
     try {
         const newBook = req.body;
         if (newBook && newBook.title && newBook.author && newBook.year) {
@@ -171,7 +215,7 @@ app.post('/api/books', express.json(), async (req, res) => {
 /******* UPDATE *********/
 /************************/
 //update book by ISBN(unique)
-app.patch('/api/books/isbn/:isbn', express.json(), async (req, res) => {
+app.patch('/api/books/isbn/:isbn', requireAuth, express.json(), async (req, res) => {
     try {
         console.log("PATCH request received");
 
@@ -222,7 +266,7 @@ app.patch('/api/books/isbn/:isbn', express.json(), async (req, res) => {
 /******* DELETE *********/
 /************************/
 //delete by unique id, i.e., ISBN (can only delete one)
-app.delete('/api/books/isbn/:isbn', async (req, res) => {
+app.delete('/api/books/isbn/:isbn', requireAuth, async (req, res) => {
     try {
         const bookISBN = Number(req.params.isbn);
         const bookFilter= { isbn: bookISBN };

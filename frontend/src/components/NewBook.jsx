@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-function NewBook({ onBookAdded }) {
+function NewBook({ onBookAdded, authToken }) {
   const [formData, setFormData] = useState({
     isbn: '',
     title: '',
@@ -12,6 +12,12 @@ function NewBook({ onBookAdded }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    //!! Class 3: block protected action if not logged in
+    if (!authToken) {
+      alert('Please login first to add books.');
+      return;
+    }
+
     const newBook = {
       isbn: formData.isbn,
       title: formData.title,
@@ -23,7 +29,10 @@ function NewBook({ onBookAdded }) {
     try {
       const response = await fetch('/api/books', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ${authToken}'
+        },
         body: JSON.stringify(newBook)
       });
       const result = await response.json();

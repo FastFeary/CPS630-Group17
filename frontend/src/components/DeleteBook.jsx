@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-function DeleteBook({ onBookDeleted }) {
+function DeleteBook({ onBookDeleted, authToken }) {
   const [isbn, setIsbn] = useState('');
 
   console.log(isbn);
@@ -8,9 +8,18 @@ function DeleteBook({ onBookDeleted }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    //!! Class 3: block protected action if not logged in
+    if (!authToken) {
+      alert('Please login first to delete books.');
+      return;
+    }
+
     try {
       const response = await fetch(`/api/books/isbn/${isbn}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
       });
       
       if (response.status === 204) {
