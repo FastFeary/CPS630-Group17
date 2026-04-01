@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-function Login({ authToken, setAuthToken }) {
+function Login({ authToken, setAuthToken, onUserLogin, onLoginFailure }) {
   //!! Class 3: simple login form for demo auth token retrieval
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -19,14 +19,14 @@ function Login({ authToken, setAuthToken }) {
 
       if (response.status === 200) {
         setAuthToken(result.token);
+        if (onUserLogin) onUserLogin(username);
         setPassword('');
-        alert('Login successful! You can now add, update, and delete books.');
       } else {
-        alert('Login failed: ' + result.error);
+        if (onLoginFailure) onLoginFailure(result.error);
       }
     } catch (error) {
       console.error('Login error:', error);
-      alert('Login request failed. Is the backend running?');
+      if (onLoginFailure) onLoginFailure('Login request failed. Is the backend running?');
     }
   };
 

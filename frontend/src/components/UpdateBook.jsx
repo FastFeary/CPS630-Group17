@@ -31,12 +31,9 @@ function UpdateBook({ onBookUpdated, authToken }) {
       const result = await response.json();
       
       if (response.status === 200) {
-        alert('Book updated successfully!');
         setIsbn('');
         setNote('');
         if (onBookUpdated) onBookUpdated(); // Refresh the book list
-      } else {
-        alert('Error: ' + result.error);
       }
     } catch (error) {
       console.error('Error updating book:', error);

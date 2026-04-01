@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import io from 'socket.io-client';
 
 function DisplayBooks({ refreshTrigger }) {
   const [books, setBooks] = useState([]);
@@ -13,11 +14,30 @@ function DisplayBooks({ refreshTrigger }) {
     }
   };
 
-  //without refreshTrigger, this would only load once on mount
-  //without the dependency array, this would load on every render (infinite loop) - BAD!
+  // Load books on mount and when refreshTrigger changes
   useEffect(() => {
     loadBooks();
-  }, [refreshTrigger]); // Reload when refreshTrigger changes
+  }, [refreshTrigger]);
+
+  // Listen for real-time Socket.io events and refresh books
+  useEffect(() => {
+    const socket = io('http://localhost:8080');
+
+    const handleRefresh = () => {
+      loadBooks();
+    };
+
+    socket.on('book_created', handleRefresh);
+    socket.on('book_updated', handleRefresh);
+    socket.on('book_deleted', handleRefresh);
+
+    return () => {
+      socket.off('book_created', handleRefresh);
+      socket.off('book_updated', handleRefresh);
+      socket.off('book_deleted', handleRefresh);
+      socket.disconnect();
+    };
+  }, []);
 
   if (books.length === 0) {
     return (

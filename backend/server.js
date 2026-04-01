@@ -3,16 +3,27 @@ const cors      = require('cors');
 const app       = express();
 const path      = require('path');
 const { default: mongoose } = require('mongoose');
+const http      = require('http');
+const { Server: SocketIOServer } = require('socket.io');
 const Book = require('./models/Book');
 
 const PORT          = 8080;
 const DATABASE_HOST = 'localhost';
 const DATABASE_PORT = 27017;
 
-//Baisc Auth Values from Node environment variables
+//Basic Auth Values from Node environment variables
 const AUTH_USERNAME = process.env.AUTH_USERNAME;
 const AUTH_PASSWORD = process.env.AUTH_PASSWORD;
 const AUTH_TOKEN = process.env.AUTH_TOKEN;
+
+// Create HTTP server and Socket.io instance
+const server = http.createServer(app);
+const io = new SocketIOServer(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+});
 
 //Enable CORS for frontend requests
 app.use(cors());
@@ -30,6 +41,30 @@ db.on('open', function() {
     console.log('database connected!');
     addTestBooksToMongoDB();
 });
+
+//Socket.io Connection Handler
+io.on('connection', (socket) => {
+    console.log('New client connected:', socket.id);
+
+    // Handle client sending a message
+    socket.on('message', (data) => {
+        console.log('Message received:', data);
+        // Broadcast the message to all connected clients
+        io.emit('message', data);
+    });
+
+    // Handle client disconnect
+    socket.on('disconnect', () => {
+        console.log('Client disconnected:', socket.id);
+    });
+
+    // Send welcome message to the connected client
+    socket.emit('notification', {
+        type: 'welcome',
+        message: 'Welcome to the Library System! You are now connected.'
+    });
+});
+
 
 //The International Standard Book Number (ISBN) is a numeric commercial book identifier that is intended to be unique.
 //we are using the ISBN 13 format more commonly used after 2007 to expand the numbering system capability
@@ -162,23 +197,40 @@ app.get('/api/books/isbn/:isbn', async (req, res) => {
 /************************/
 //return a json object with all books that match the author (could be more than one e.g., multiple editions)
 //ideally this search would be more flexible (e.g., partial match) but for simplicity we are doing an exact match here
-//Consider what other cases to be checked and status codes might be appropriate in some of these functions ...
-//Using query parameter to avoid route conflicts: /api/books/search?author=AuthorName
+//Enhanced search: supports partial matching by author, ISBN, or year
+//Using query parameters: /api/books/search?author=Name&isbn=123&year=2020
 app.get('/api/books/search', async (req, res) => {
     try {
-        const bookAuthor = req.query.author;
-        const bookFilter = { author: bookAuthor };
+        const { author, isbn, year } = req.query;
         
-        if (!bookAuthor) {
-            return res.status(400).json({ error: "Author query parameter is required" });
+        // At least one search parameter must be provided
+        if (!author && !isbn && !year) {
+            return res.status(400).json({ error: "Please provide at least one search parameter (author, isbn, or year)" });
         }
 
-        //use regex for case-insensitive search
+        // Build dynamic filter using regex for partial, case-insensitive matching
+        const bookFilter = {};
+        
+        if (author) {
+            // Partial match, case-insensitive
+            bookFilter.author = { $regex: author, $options: 'i' };
+        }
+        
+        if (isbn) {
+            // Exact match for ISBN or partial if provided as string
+            bookFilter.isbn = { $regex: isbn, $options: 'i' };
+        }
+        
+        if (year) {
+            // Exact year match
+            bookFilter.year = parseInt(year);
+        }
+
         const books = await booksColl.find(bookFilter).toArray();
         if (books.length > 0) {
             res.status(200).json(books);
         } else {
-            res.status(404).json({ error: "Book(s) not found" });
+            res.status(404).json({ error: "No books found matching your search criteria" });
         }
     } catch (err) {
         res.status(500).json({ error: 'Error searching books: ' + err });
@@ -201,6 +253,14 @@ app.post('/api/books', requireAuth, express.json(), async (req, res) => {
 
             const book = new Book(newBook);
             const savedBook = await book.save();
+            
+            // Emit real-time notification to all connected clients
+            io.emit('book_created', {
+                type: 'book_added',
+                message: `New book added: "${savedBook.title}" by ${savedBook.author}`,
+                book: savedBook
+            });
+            
             res.status(201).json(savedBook);
         } else {
             res.status(400).json({ error: "Invalid book data" });
@@ -229,9 +289,16 @@ app.patch('/api/books/isbn/:isbn', requireAuth, express.json(), async (req, res)
             },
         };
 
-
         const book = await booksColl.updateOne(bookFilter, updateNote);
         if (book) {
+            // Emit real-time notification to all connected clients
+            io.emit('book_updated', {
+                type: 'book_modified',
+                message: `Book with ISBN ${bookISBN} has been updated`,
+                isbn: bookISBN,
+                note: newNote
+            });
+            
             res.status(200).json(book);
         } else {
             res.status(404).json({ error: "Book not found" });
@@ -239,26 +306,6 @@ app.patch('/api/books/isbn/:isbn', requireAuth, express.json(), async (req, res)
     } catch (err) {
         res.status(500).json({ error: 'Error updating book: ' + err });
     }
-
-
-    // try {
-    //     console.log("PATCH request received");
-
-    //     const bookId = Number(req.params.isbn);
-    //     const updatedBook = req.body;
-    //     const book = await Book.findOneAndUpdate(
-    //         { isbn: bookId },
-    //         { note: updatedBook.note },
-    //         { new: true }
-    //     );
-    //     if (book) {
-    //         res.status(200).json(book);
-    //     } else {
-    //         res.status(404).json({ error: "Book not found" });
-    //     }
-    // } catch (err) {
-    //     res.status(500).json({ error: 'Error updating book: ' + err });
-    // }
 }); 
 
 /************************/
@@ -273,6 +320,13 @@ app.delete('/api/books/isbn/:isbn', requireAuth, async (req, res) => {
 
         const book = booksColl.deleteOne(bookFilter);
         if (book) {
+            // Emit real-time notification to all connected clients
+            io.emit('book_deleted', {
+                type: 'book_removed',
+                message: `Book with ISBN ${bookISBN} has been deleted`,
+                isbn: bookISBN
+            });
+            
             res.status(204).send();
         } else {
             res.status(404).json({ error: "Book not found" });
@@ -283,4 +337,4 @@ app.delete('/api/books/isbn/:isbn', requireAuth, async (req, res) => {
 });
 
 //starts server
-app.listen(PORT, () => { console.log("Server started on port: " + PORT) });
+server.listen(PORT, () => { console.log("Server started on port: " + PORT) });

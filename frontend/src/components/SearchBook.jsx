@@ -1,67 +1,119 @@
 import { useState } from 'react';
 
-//let's search for books by author name (we won't spend time allowing a partial search - it must be exact match)
-//partial search matching would be nice to add later though ;)
 function SearchBook() {
-  //set up our state variables
+  // State variables for multiple search fields
   const [author, setAuthor] = useState('');
+  const [isbn, setIsbn] = useState('');
+  const [year, setYear] = useState('');
   const [books, setBooks] = useState([]);
   const [searched, setSearched] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  //function to handle form submission
+  // Function to handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    //trim whitespace and check for empty input
-    if (!author.trim()) {
-      alert('Please enter an author name');
+    setErrorMessage('');
+
+    // Check if at least one search field is filled
+    if (!author.trim() && !isbn.trim() && !year.trim()) {
+      setErrorMessage('Please enter at least one search criterion (author, ISBN, or year)');
+      setBooks([]);
+      setSearched(false);
       return;
     }
 
-    //use a try statement to catch any errors during the fetch
     try {
-      //let's make the fetch call to our backend API
-      //we use url encoding to handle special characters in author names
-      //we must encode as we can't have characters like spaces in the URLs and the node/express backend will decode
-      const response = await fetch(`/api/books/search?author=${encodeURIComponent(author)}`);
+      // Build query parameters dynamically
+      const params = new URLSearchParams();
+      if (author.trim()) params.append('author', author);
+      if (isbn.trim()) params.append('isbn', isbn);
+      if (year.trim()) params.append('year', year);
+
+      const response = await fetch(`/api/books/search?${params.toString()}`);
       const result = await response.json();
-      
-      //if the response is successful, we update our books state with the results and set searched to true to show results
+
       if (response.status === 200) {
         setBooks(result);
-        setSearched(true);
+        setErrorMessage('');
       } else {
-        alert('Error: ' + result.error);
+        setErrorMessage(result.error || 'No books found');
         setBooks([]);
-        setSearched(true);
       }
+      setSearched(true);
     } catch (error) {
       console.error('Error searching books:', error);
-      alert(`An error occurred while searching for books. ${error.message}`);
+      setErrorMessage(`An error occurred: ${error.message}`);
+      setBooks([]);
+      setSearched(true);
     }
+  };
+
+  const handleClear = () => {
+    setAuthor('');
+    setIsbn('');
+    setYear('');
+    setBooks([]);
+    setSearched(false);
+    setErrorMessage('');
   };
 
   return (
     <>
       <div id="search-book" className="search-card">
-        <h2>Search Books by Author</h2>
+        <h2>Search Books</h2>
         <form onSubmit={handleSubmit}>
-          <input 
-            type="text" 
-            placeholder="Enter author name" 
-            value={author}
-            onChange={(e) => {
-              setAuthor(e.target.value);
-              setSearched(false);
-            }}
-          />
-          <button type="submit">Search</button>
+          <div className="search-fields">
+            <div className="search-field">
+              <label htmlFor="author">Author (partial match):</label>
+              <input 
+                id="author"
+                type="text" 
+                placeholder="e.g., 'Liu' or 'Carl'" 
+                value={author}
+                onChange={(e) => setAuthor(e.target.value)}
+              />
+            </div>
+
+            <div className="search-field">
+              <label htmlFor="isbn">ISBN:</label>
+              <input 
+                id="isbn"
+                type="text" 
+                placeholder="e.g., '9780765'" 
+                value={isbn}
+                onChange={(e) => setIsbn(e.target.value)}
+              />
+            </div>
+
+            <div className="search-field">
+              <label htmlFor="year">Year:</label>
+              <input 
+                id="year"
+                type="number" 
+                placeholder="e.g., 2008" 
+                value={year}
+                onChange={(e) => setYear(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="search-buttons">
+            <button type="submit">Search</button>
+            <button type="button" onClick={handleClear}>Clear</button>
+          </div>
         </form>
+
+        {errorMessage && (
+          <div className="search-error">
+            <p>{errorMessage}</p>
+          </div>
+        )}
 
         {searched && (
           <>
             {books.length > 0 ? (
               <div id="search-results">
+                <p className="result-count">Found {books.length} book(s)</p>
                 {books.map(book => {
                   const imageName = (book.hasImage ? book.isbn : 'PlaceholderBook') + '.jpg';
                   return (
@@ -79,7 +131,7 @@ function SearchBook() {
                 })}
               </div>
             ) : (
-              <p>No books found for author "{author}".</p>
+              <p className="no-results">No books found matching your search criteria.</p>
             )}
           </>
         )}

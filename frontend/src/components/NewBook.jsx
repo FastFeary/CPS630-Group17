@@ -31,18 +31,15 @@ function NewBook({ onBookAdded, authToken }) {
         method: 'POST',
         headers: { 
             'Content-Type': 'application/json',
-            Authorization: 'Bearer ${authToken}'
+            'Authorization': `Bearer ${authToken}`
         },
         body: JSON.stringify(newBook)
       });
       const result = await response.json();
       
       if (response.status === 201) {
-        alert('Book added successfully!');
         setFormData({ isbn: '', title: '', author: '', year: '', note: '' }); // Reset form
         if (onBookAdded) onBookAdded(); // Refresh the book list
-      } else {
-        alert('Error: ' + result.error);
       }
     } catch (error) {
       console.error('Error adding book:', error);

@@ -23,12 +23,8 @@ function DeleteBook({ onBookDeleted, authToken }) {
       });
       
       if (response.status === 204) {
-        alert('Book deleted successfully!');
         setIsbn('');
         if (onBookDeleted) onBookDeleted(); // Refresh the book list
-      } else {
-        const result = await response.json();
-        alert('Error: ' + result.error);
       }
     } catch (error) {
       console.error('Error deleting book:', error);
