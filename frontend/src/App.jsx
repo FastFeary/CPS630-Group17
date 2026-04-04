@@ -53,7 +53,7 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // ── Notifications 
+  // Notifications 
   const addNotification = (notification) => {
     const id = Date.now();
     setNotifications(prev => [...prev, { ...notification, id }]);
