@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, NavLink } from 'react-router-dom';
 import io from 'socket.io-client';
 
 import DisplayBooks from './components/DisplayBooks';
@@ -17,10 +17,12 @@ let socket = null;
 
 function App() {
   const [refreshTrigger, setRefreshTrigger] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
-  const [notifications, setNotifications] = useState([]);
+  const [isConnected, setIsConnected]       = useState(false);
+  const [notifications, setNotifications]   = useState([]);
+  const [authToken, setAuthToken]           = useState('');
+  const [menuOpen, setMenuOpen]             = useState(false);
 
-  // Initialize Socket.io connection on mount
+  // ── Socket.io setup
   useEffect(() => {
     socket = io('http://localhost:8080', {
       reconnection: true,
@@ -29,141 +31,245 @@ function App() {
       reconnectionAttempts: 5
     });
 
-    // Connection event
-    socket.on('connect', () => {
-      console.log('Connected to Socket.io server');
-      setIsConnected(true);
-    });
+    socket.on('connect',    () => { setIsConnected(true); });
+    socket.on('disconnect', () => { setIsConnected(false); });
 
-    // Disconnection event
-    socket.on('disconnect', () => {
-      console.log('Disconnected from Socket.io server');
-      setIsConnected(false);
-    });
-
-    // Notification event (ignore welcome message on initial connection)
     socket.on('notification', (data) => {
-      console.log('Notification received:', data);
-      if (data.type !== 'welcome') {
-        addNotification(data);
-      }
+      if (data.type !== 'welcome') addNotification(data);
     });
 
-    // Book created event
-    socket.on('book_created', (data) => {
-      console.log('Book created event:', data);
-      addNotification(data);
-      setRefreshTrigger(prev => !prev);
-    });
+    socket.on('book_created', (data) => { addNotification(data); setRefreshTrigger(p => !p); });
+    socket.on('book_updated', (data) => { addNotification(data); setRefreshTrigger(p => !p); });
+    socket.on('book_deleted', (data) => { addNotification(data); setRefreshTrigger(p => !p); });
 
-    // Book updated event
-    socket.on('book_updated', (data) => {
-      console.log('Book updated event:', data);
-      addNotification(data);
-      setRefreshTrigger(prev => !prev);
-    });
-
-    // Book deleted event
-    socket.on('book_deleted', (data) => {
-      console.log('Book deleted event:', data);
-      addNotification(data);
-      setRefreshTrigger(prev => !prev);
-    });
-
-    // Cleanup on unmount
-    return () => {
-      if (socket) socket.disconnect();
-    };
+    return () => { if (socket) socket.disconnect(); };
   }, []);
 
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) setMenuOpen(false);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // ── Notifications 
   const addNotification = (notification) => {
     const id = Date.now();
-    const notificationWithId = { ...notification, id };
-    
-    setNotifications(prev => [...prev, notificationWithId]);
-
-    // Auto-remove notification after 5 seconds
-    setTimeout(() => {
-      removeNotification(id);
-    }, 5000);
+    setNotifications(prev => [...prev, { ...notification, id }]);
+    setTimeout(() => removeNotification(id), 5000);
   };
 
   const removeNotification = (id) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  const handleRefresh = () => {
-    setRefreshTrigger(prev => !prev);
-  };
+  const handleRefresh = () => setRefreshTrigger(p => !p);
 
   const handleUserLogin = (username) => {
-    addNotification({
-      type: 'welcome',
-      message: `Welcome ${username}`
-    });
+    addNotification({ type: 'welcome', message: `Welcome, ${username}! You are now signed in.` });
   };
 
   const handleLoginFailure = (errorMessage) => {
-    addNotification({
-      type: 'loginFailed',
-      message: `Login failed: ${errorMessage}`
-    });
+    addNotification({ type: 'loginFailed', message: `Sign-in failed: ${errorMessage}` });
   };
 
-  //store auth token in app state
-  const [authToken, setAuthToken] = useState('');
+  const closeMenu = () => setMenuOpen(false);
 
   return (
-    <>
-      {/* Real-time Notification Center - Always visible */}
-      <NotificationCenter 
-        notifications={notifications} 
+    <div className="app-shell">
+
+      {/* Skip to content — accessibility */}
+      <a className="skip-link" href="#main-content">Skip to main content</a>
+
+      {/* Real-time Notification Center */}
+      <NotificationCenter
+        notifications={notifications}
         removeNotification={removeNotification}
         isConnected={isConnected}
       />
 
-      <Login authToken={authToken} setAuthToken={setAuthToken} onUserLogin={handleUserLogin} onLoginFailure={handleLoginFailure} />
-      {/* //!! Class 3: show app features only when user is logged in */}
-      {authToken && (
-        <>
-          <Router>
-            <h1>Online Library System</h1>
-            <nav>
-              <Link to="/">Home</Link> |{" "}
-              <Link to="/add">Add Book</Link> |{" "}
-              <Link to="/manage">Manage Books</Link>
-            </nav>
+      <Router>
+        {/* Navbar */}
+        <header>
+          <nav className="navbar" role="navigation" aria-label="Main navigation">
 
-            <Routes>
-              <Route
-                path="/"
-                element={
+            {/* Brand */}
+            <Link to="/" className="navbar__brand" onClick={closeMenu}>
+              Class<span>Book</span>
+            </Link>
+
+            {/* Mobile hamburger button */}
+            <button
+              className={`navbar__hamburger ${menuOpen ? 'open' : ''}`}
+              onClick={() => setMenuOpen(o => !o)}
+              aria-expanded={menuOpen}
+              aria-controls="nav-links"
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              type="button"
+            >
+              <span aria-hidden="true" />
+              <span aria-hidden="true" />
+              <span aria-hidden="true" />
+            </button>
+
+            {/* Nav links — hidden on mobile, visible as dropdown when open */}
+            <div
+              id="nav-links"
+              className={`navbar__links ${menuOpen ? 'open' : ''}`}
+              role="menubar"
+            >
+              <NavLink to="/" end onClick={closeMenu}
+                className={({ isActive }) => isActive ? 'nav-active' : ''}>
+                {({ isActive }) =>
+                  <button type="button" className={isActive ? 'nav-active' : ''}>
+                    Browse
+                  </button>
+                }
+              </NavLink>
+
+              {authToken && (
+                <>
+                  <NavLink to="/add" onClick={closeMenu}
+                    className={({ isActive }) => isActive ? 'nav-active' : ''}>
+                    {({ isActive }) =>
+                      <button type="button" className={isActive ? 'nav-active' : ''}>
+                        Add Book
+                      </button>
+                    }
+                  </NavLink>
+
+                  <NavLink to="/manage" onClick={closeMenu}
+                    className={({ isActive }) => isActive ? 'nav-active' : ''}>
+                    {({ isActive }) =>
+                      <button type="button" className={isActive ? 'nav-active' : ''}>
+                        Manage
+                      </button>
+                    }
+                  </NavLink>
+                </>
+              )}
+            </div>
+
+            {/* Auth panel */}
+            <div className="navbar__auth">
+              <Login
+                authToken={authToken}
+                setAuthToken={setAuthToken}
+                onUserLogin={handleUserLogin}
+                onLoginFailure={handleLoginFailure}
+              />
+            </div>
+          </nav>
+
+          {/* Connection status bar */}
+          <div className="status-bar" role="status" aria-live="polite">
+            <span
+              className={`status-dot ${isConnected ? 'status-dot--on' : 'status-dot--off'}`}
+              aria-hidden="true"
+            />
+            {isConnected
+              ? 'Live updates on'
+              : 'Connecting to server…'}
+          </div>
+        </header>
+
+        {/* Main content */}
+        <main id="main-content" className="main-content">
+
+          {/* Login panel — shown on mobile (not in navbar) */}
+          <div className="mobile-login-wrapper" aria-label="Sign in">
+            <Login
+              authToken={authToken}
+              setAuthToken={setAuthToken}
+              onUserLogin={handleUserLogin}
+              onLoginFailure={handleLoginFailure}
+            />
+          </div>
+          {!authToken && (
+            <div className="banner banner--info" role="alert">
+              <span aria-hidden="true">ℹ️</span>
+              Please sign in above to access all features — add, update, or delete books.
+            </div>
+          )}
+
+          <Routes>
+            {/* ── Home / Browse ── */}
+            <Route
+              path="/"
+              element={
+                <>
+                  {/* Hero banner — only on home page */}
+                  <div className="hero" role="banner">
+                    <h1 className="hero__title">Welcome to ClassBook</h1>
+                    <p className="hero__sub">
+                      Browse the library collection, search by author or ISBN,
+                      and manage your books — all in one place.
+                    </p>
+                    <button
+                      className="hero__cta"
+                      onClick={() => document.getElementById('books-display')?.scrollIntoView({ behavior: 'smooth' })}
+                      type="button"
+                    >
+                      Browse collection ↓
+                    </button>
+                  </div>
+
+                  {/* Browse layout — stacks on mobile, side-by-side on desktop */}
                   <div id="browse-container">
                     <SearchBook />
                     <DisplayBooks refreshTrigger={refreshTrigger} />
                   </div>
-                }
-              />
+                </>
+              }
+            />
 
-              <Route path="/add" element={
+            {/* Add Book */}
+            <Route
+              path="/add"
+              element={
                 <>
-                  <h2>Add New Book</h2>
+                  <nav className="breadcrumb" aria-label="Breadcrumb">
+                    <Link to="/">Home</Link>
+                    <span className="breadcrumb__sep" aria-hidden="true">›</span>
+                    <span className="breadcrumb__current">Add Book</span>
+                  </nav>
+                  <h2 className="page-heading">Add a New Book</h2>
                   <NewBook onBookAdded={handleRefresh} authToken={authToken} />
                 </>
-              } />
+              }
+            />
 
-              <Route path="/manage" element={
+            {/* Manage Books */}
+            <Route
+              path="/manage"
+              element={
                 <>
-                  <h2>Manage Books</h2>
-                  <UpdateBook onBookUpdated={handleRefresh} authToken={authToken} />
-                  <DeleteBook onBookDeleted={handleRefresh} authToken={authToken} />
+                  <nav className="breadcrumb" aria-label="Breadcrumb">
+                    <Link to="/">Home</Link>
+                    <span className="breadcrumb__sep" aria-hidden="true">›</span>
+                    <span className="breadcrumb__current">Manage Books</span>
+                  </nav>
+                  <h2 className="page-heading">Manage Books</h2>
+
+                  <div className="manage-grid">
+                    <UpdateBook onBookUpdated={handleRefresh} authToken={authToken} />
+                    <DeleteBook onBookDeleted={handleRefresh} authToken={authToken} />
+                  </div>
                 </>
-              } />
-            </Routes>
-          </Router>
-        </>
-      )}
-    </>
+              }
+            />
+          </Routes>
+        </main>
+
+        {/* Footer */}
+        <footer className="app-footer" role="contentinfo">
+          <span>© 2026 ClassBook — Library Management System</span>
+          <span>CPS 630 · Group Project · A3</span>
+        </footer>
+
+      </Router>
+    </div>
   );
 }
 
