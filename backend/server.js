@@ -1,13 +1,14 @@
-const express   = require('express');
-const cors      = require('cors');
-const app       = express();
-const path      = require('path');
+const express = require('express');
+const cors = require('cors');
+const app = express();
+const path = require('path');
 const { default: mongoose } = require('mongoose');
-const http      = require('http');
+const http = require('http');
 const { Server: SocketIOServer } = require('socket.io');
-const Book = require('./models/Book');
+const Class = require('./models/Class');
+const Booking = require('./models/Booking');
 
-const PORT          = 8080;
+const PORT = 8080;
 const DATABASE_HOST = 'localhost';
 const DATABASE_PORT = 27017;
 
@@ -29,17 +30,17 @@ const io = new SocketIOServer(server, {
 app.use(cors());
 
 //database connect
-const dbURL = `mongodb://${DATABASE_HOST}:${DATABASE_PORT}/book_library`;
+const dbURL = `mongodb://${DATABASE_HOST}:${DATABASE_PORT}/class_schedule`;
 mongoose.connect(dbURL);
 
 const db = mongoose.connection;
-const booksColl = db.collection("books");
-db.on('error', function(e) {
+const classesColl = db.collection("classes");
+db.on('error', function (e) {
     console.log('error connecting:' + e);
 });
-db.on('open', function() {
+db.on('open', function () {
     console.log('database connected!');
-    addTestBooksToMongoDB();
+    addTestClassesToMongoDB();
 });
 
 //Socket.io Connection Handler
@@ -61,47 +62,40 @@ io.on('connection', (socket) => {
     // Send welcome message to the connected client
     socket.emit('notification', {
         type: 'welcome',
-        message: 'Welcome to the Library System! You are now connected.'
+        message: 'Welcome to the Community Class System! You are now connected.'
     });
 });
 
 
-//The International Standard Book Number (ISBN) is a numeric commercial book identifier that is intended to be unique.
-//we are using the ISBN 13 format more commonly used after 2007 to expand the numbering system capability
-//Liu Cixin pronounced approximately as "Lee-ooo Suh-sheen"
-let book_library = [
-    { isbn:9780765382030, hasImage:true, title:"The Three-Body Problem",   author:"Liu Cixin",           year:2008, note:""},
-    { isbn:9780765386694, hasImage:true, title:"The Dark Forest",          author:"Liu Cixin",           year:2008, note:""},
-    { isbn:9780765386632, hasImage:true, title:"Death's End",              author:"Liu Cixin",           year:2010, note:""},
-    { isbn:9781501197987, hasImage:true, title:"Contact",                  author:"Carl Sagan",          year:1985, note:""},
-    { isbn:9780553287899, hasImage:true, title:"Rendezvous With Rama",     author:"Arthur C. Clarke",    year:1973, note:""},
-    { isbn:9780358380221, hasImage:true, title:"Rendezvous With Rama",     author:"Arthur C. Clarke",    year:1973, note:""}
+// Sample classes to seed the database
+// classCode is a unique numeric identifier, duration is stored in minutes
+let class_schedule = [
+    { classCode: 1001, hasImage: true, className: "Beginner Sewing", instructor: "Martha Collins", duration: 90, frequency: "Tue/Thu Jan 7 - Mar 27 2026", note: "" },
+    { classCode: 1002, hasImage: true, className: "Cooking Lessons", instructor: "David Nguyen", duration: 120, frequency: "Wed Jan 8 - Apr 1 2026", note: "" },
+    { classCode: 1003, hasImage: true, className: "Painting Lessons", instructor: "Sofia Reyes", duration: 90, frequency: "Sat Jan 10 - Mar 28 2026", note: "" },
+    { classCode: 1004, hasImage: true, className: "Group Reading Circle", instructor: "James Okafor", duration: 60, frequency: "Mon Jan 6 - Apr 27 2026", note: "" },
+    { classCode: 1005, hasImage: true, className: "Yoga for Seniors", instructor: "Linda Park", duration: 60, frequency: "Mon/Wed/Fri Jan 5 - Apr 24 2026", note: "" }
 ];
 
-//!! let's add a function called addTestBooksToMongoDB()
-//we will add some test data to the database (if there is not already data in the database)
-async function addTestBooksToMongoDB() {
+// Upsert seed classes — updates existing records so name/image fixes apply without clearing the DB
+async function addTestClassesToMongoDB() {
     try {
-        const bookCount = await Book.countDocuments();
+        console.log('Syncing seed classes with database ...');
 
-        if (bookCount === 0) {
-            console.log('Adding test books to db ...');
+        const upsertPromises = class_schedule.map(classData =>
+            Class.updateOne(
+                { classCode: classData.classCode },   // match by code
+                { $set: classData },                  // apply all fields
+                { upsert: true }                      // insert if not found
+            )
+                .then(() => console.log('Synced class ' + classData.classCode + ': ' + classData.className))
+                .catch(err => console.error('Error syncing class ' + classData.classCode + ': ' + err))
+        );
 
-            const savePromises = book_library.map(book => {
-                const newBook = new Book(book);
-                return newBook.save()
-                    .then(() => console.log('Book added with ISBN ' + book.isbn))
-                    .catch(err => console.error('Error adding book with ISBN ' + book.isbn + ': ' + err));
-            });
-
-            await Promise.all(savePromises);
-            console.log('All test books added successfully!');
-        }
-        else {
-            console.log('Books already exist. Not adding test books.');
-        }
+        await Promise.all(upsertPromises);
+        console.log('All seed classes synced successfully!');
     } catch (err) {
-        console.error('Error in addTestBooksToMongoDB: ' + err);
+        console.error('Error in addTestClassesToMongoDB: ' + err);
     }
 }
 
@@ -121,12 +115,6 @@ function requireAuth(req, res, next) {
 
     next();
 }
-
-//don't need this as our vite server is serving content.
-// //we will only have one web page - maybe we can add more later
-// app.get('/', (req, res) => {
-//     res.sendFile(path.join(__dirname, '/views/index.html'));
-// });
 
 /*************************************************/
 /********* Defining (CRUD) API routes ************/
@@ -158,14 +146,14 @@ app.post('/api/auth/login', express.json(), (req, res) => {
 /******* SERVER *********/
 /******** READ **********/
 /************************/
-//get all books
-app.get('/api/books', async (req, res) => {
+//get all classes
+app.get('/api/classes', async (req, res) => {
     try {
-        const books = await Book.find();
-        res.json(books);
-        console.log('Retrieved ' + books.length + ' books from database');  //want to see results for debugging
+        const classes = await Class.find();
+        res.json(classes);
+        console.log('Retrieved ' + classes.length + ' classes from database');
     } catch (err) {
-        res.status(500).json({ error: 'Error retrieving books: ' + err });
+        res.status(500).json({ error: 'Error retrieving classes: ' + err });
     }
 });
 
@@ -173,21 +161,21 @@ app.get('/api/books', async (req, res) => {
 /******* SERVER *********/
 /******** READ **********/
 /************************/
-//get book by ISBN (unique id)
+//get class by class code (unique id)
 //In Express.js route definitions, the colon (:) prefix indicates a route parameter (also called a path parameter)
-app.get('/api/books/isbn/:isbn', async (req, res) => {
+app.get('/api/classes/code/:code', async (req, res) => {
     try {
-        //convert ISBN to number to match the database type
-        const isbn = Number(req.params.isbn);
+        //convert class code to number to match the database type
+        const classCode = Number(req.params.code);
         //findOne() returns the first matching document (or null if none found)
-        const book = await Book.findOne({ isbn: isbn });
-        if (book) {
-            res.status(200).json(book); //status code 200 = OK
+        const foundClass = await Class.findOne({ classCode: classCode });
+        if (foundClass) {
+            res.status(200).json(foundClass); //status code 200 = OK
         } else {
-            res.status(404).json({ error: "Book not found" });  //status 404 code = NOT FOUND
+            res.status(404).json({ error: "Class not found" });  //status 404 code = NOT FOUND
         }
     } catch (err) {
-        res.status(500).json({ error: 'Error retrieving book: ' + err });
+        res.status(500).json({ error: 'Error retrieving class: ' + err });
     }
 });
 
@@ -195,45 +183,47 @@ app.get('/api/books/isbn/:isbn', async (req, res) => {
 /******* SERVER *********/
 /******** READ **********/
 /************************/
-//return a json object with all books that match the author (could be more than one e.g., multiple editions)
-//ideally this search would be more flexible (e.g., partial match) but for simplicity we are doing an exact match here
-//Enhanced search: supports partial matching by author, ISBN, or year
-//Using query parameters: /api/books/search?author=Name&isbn=123&year=2020
-app.get('/api/books/search', async (req, res) => {
+//return a json object with all classes that match the search criteria
+//Enhanced search: supports partial matching by instructor, classCode, or duration
+//Using query parameters: /api/classes/search?instructor=Name&classCode=123&duration=90
+app.get('/api/classes/search', async (req, res) => {
     try {
-        const { author, isbn, year } = req.query;
-        
+        const { instructor, classCode, duration } = req.query;
+
         // At least one search parameter must be provided
-        if (!author && !isbn && !year) {
-            return res.status(400).json({ error: "Please provide at least one search parameter (author, isbn, or year)" });
+        if (!instructor && !classCode && !duration) {
+            return res.status(400).json({ error: "Please provide at least one search parameter (instructor, classCode, or duration)" });
         }
 
         // Build dynamic filter using regex for partial, case-insensitive matching
-        const bookFilter = {};
-        
-        if (author) {
+        const classFilter = {};
+
+        if (instructor) {
             // Partial match, case-insensitive
-            bookFilter.author = { $regex: author, $options: 'i' };
-        }
-        
-        if (isbn) {
-            // Exact match for ISBN or partial if provided as string
-            bookFilter.isbn = { $regex: isbn, $options: 'i' };
-        }
-        
-        if (year) {
-            // Exact year match
-            bookFilter.year = parseInt(year);
+            classFilter.instructor = { $regex: instructor, $options: 'i' };
         }
 
-        const books = await booksColl.find(bookFilter).toArray();
-        if (books.length > 0) {
-            res.status(200).json(books);
+        if (classCode) {
+
+            const codeNum = parseInt(classCode);
+            if (!isNaN(codeNum)) {
+                classFilter.classCode = codeNum;
+            }
+        }
+
+        if (duration) {
+            // Exact duration match (in minutes)
+            classFilter.duration = parseInt(duration);
+        }
+
+        const classes = await classesColl.find(classFilter).toArray();
+        if (classes.length > 0) {
+            res.status(200).json(classes);
         } else {
-            res.status(404).json({ error: "No books found matching your search criteria" });
+            res.status(404).json({ error: "No classes found matching your search criteria" });
         }
     } catch (err) {
-        res.status(500).json({ error: 'Error searching books: ' + err });
+        res.status(500).json({ error: 'Error searching classes: ' + err });
     }
 });
 
@@ -241,32 +231,32 @@ app.get('/api/books/search', async (req, res) => {
 /******* SERVER *********/
 /******* CREATE *********/
 /************************/
-//create new book
-app.post('/api/books', requireAuth, express.json(), async (req, res) => {
+//create new class
+app.post('/api/classes', requireAuth, express.json(), async (req, res) => {
     try {
-        const newBook = req.body;
-        if (newBook && newBook.title && newBook.author && newBook.year) {
+        const newClassData = req.body;
+        if (newClassData && newClassData.className && newClassData.instructor && newClassData.duration && newClassData.frequency) {
 
-            if (!newBook.hasImage) {
-                newBook.hasImage = false; //default value
+            if (!newClassData.hasImage) {
+                newClassData.hasImage = false; //default value
             }
 
-            const book = new Book(newBook);
-            const savedBook = await book.save();
-            
+            const newClass = new Class(newClassData);
+            const savedClass = await newClass.save();
+
             // Emit real-time notification to all connected clients
-            io.emit('book_created', {
-                type: 'book_added',
-                message: `New book added: "${savedBook.title}" by ${savedBook.author}`,
-                book: savedBook
+            io.emit('class_created', {
+                type: 'class_added',
+                message: `New class added: "${savedClass.className}" by ${savedClass.instructor}`,
+                class: savedClass
             });
-            
-            res.status(201).json(savedBook);
+
+            res.status(201).json(savedClass);
         } else {
-            res.status(400).json({ error: "Invalid book data" });
+            res.status(400).json({ error: "Invalid class data" });
         }
     } catch (err) {
-        res.status(500).json({ error: 'Error creating book: ' + err });
+        res.status(500).json({ error: 'Error creating class: ' + err });
     }
 });
 
@@ -274,14 +264,14 @@ app.post('/api/books', requireAuth, express.json(), async (req, res) => {
 /******* SERVER *********/
 /******* UPDATE *********/
 /************************/
-//update book by ISBN(unique)
-app.patch('/api/books/isbn/:isbn', requireAuth, express.json(), async (req, res) => {
+//update class by class code (unique)
+app.patch('/api/classes/code/:code', requireAuth, express.json(), async (req, res) => {
     try {
         console.log("PATCH request received");
 
-        const bookISBN = Number(req.params.isbn);
-        const bookFilter = { isbn: bookISBN };
-        
+        const classCode = Number(req.params.code);
+        const classFilter = { classCode: classCode };
+
         const newNote = req.body.note;
         const updateNote = {
             $set: {
@@ -289,50 +279,135 @@ app.patch('/api/books/isbn/:isbn', requireAuth, express.json(), async (req, res)
             },
         };
 
-        const book = await booksColl.updateOne(bookFilter, updateNote);
-        if (book) {
+        const result = await classesColl.updateOne(classFilter, updateNote);
+        if (result) {
             // Emit real-time notification to all connected clients
-            io.emit('book_updated', {
-                type: 'book_modified',
-                message: `Book with ISBN ${bookISBN} has been updated`,
-                isbn: bookISBN,
+            io.emit('class_updated', {
+                type: 'class_modified',
+                message: `Class with code ${classCode} has been updated`,
+                classCode: classCode,
                 note: newNote
             });
-            
-            res.status(200).json(book);
+
+            res.status(200).json(result);
         } else {
-            res.status(404).json({ error: "Book not found" });
+            res.status(404).json({ error: "Class not found" });
         }
     } catch (err) {
-        res.status(500).json({ error: 'Error updating book: ' + err });
+        res.status(500).json({ error: 'Error updating class: ' + err });
     }
-}); 
+});
 
 /************************/
 /******* SERVER *********/
 /******* DELETE *********/
 /************************/
-//delete by unique id, i.e., ISBN (can only delete one)
-app.delete('/api/books/isbn/:isbn', requireAuth, async (req, res) => {
+//delete by unique id, i.e., class code (can only delete one)
+app.delete('/api/classes/code/:code', requireAuth, async (req, res) => {
     try {
-        const bookISBN = Number(req.params.isbn);
-        const bookFilter= { isbn: bookISBN };
+        const classCode = Number(req.params.code);
+        const classFilter = { classCode: classCode };
 
-        const book = booksColl.deleteOne(bookFilter);
-        if (book) {
+        const result = classesColl.deleteOne(classFilter);
+        if (result) {
             // Emit real-time notification to all connected clients
-            io.emit('book_deleted', {
-                type: 'book_removed',
-                message: `Book with ISBN ${bookISBN} has been deleted`,
-                isbn: bookISBN
+            io.emit('class_deleted', {
+                type: 'class_removed',
+                message: `Class with code ${classCode} has been deleted`,
+                classCode: classCode
             });
-            
+
             res.status(204).send();
         } else {
-            res.status(404).json({ error: "Book not found" });
+            res.status(404).json({ error: "Class not found" });
         }
     } catch (err) {
-        res.status(500).json({ error: 'Error deleting book: ' + err });
+        res.status(500).json({ error: 'Error deleting class: ' + err });
+    }
+});
+
+/************************/
+/******* SERVER *********/
+/****** BOOKINGS ********/
+/************************/
+// Get all bookings, joined with class details
+app.get('/api/bookings', async (req, res) => {
+    try {
+        const bookings = await Booking.find();
+
+        // Enrich each booking with the matching class document
+        const enriched = await Promise.all(
+            bookings.map(async (b) => {
+                const cls = await Class.findOne({ classCode: b.classCode });
+                return { ...b.toObject(), classDetails: cls };
+            })
+        );
+
+        res.status(200).json(enriched);
+    } catch (err) {
+        res.status(500).json({ error: 'Error retrieving bookings: ' + err });
+    }
+});
+
+// Book a class (requires auth)
+app.post('/api/bookings', requireAuth, express.json(), async (req, res) => {
+    try {
+        const { classCode } = req.body;
+
+        if (!classCode) {
+            return res.status(400).json({ error: 'classCode is required' });
+        }
+
+        // Make sure the class exists
+        const cls = await Class.findOne({ classCode: Number(classCode) });
+        if (!cls) {
+            return res.status(404).json({ error: 'Class not found' });
+        }
+
+        // Prevent duplicate bookings
+        const existing = await Booking.findOne({ classCode: Number(classCode) });
+        if (existing) {
+            return res.status(409).json({ error: 'This class is already booked.' });
+        }
+
+        // Create booking
+        const newBooking = new Booking({ classCode: Number(classCode) });
+        const savedBooking = await newBooking.save();
+
+        // Emit real time notification to all connected clients
+        io.emit('class_booked', {
+            type: 'class_booked',
+            message: `"${cls.className}" has been successfully booked!`,
+            classCode: cls.classCode,
+            className: cls.className
+        });
+
+        res.status(201).json(savedBooking);
+    } catch (err) {
+        res.status(500).json({ error: 'Error booking class: ' + err });
+    }
+});
+
+// Cancel a booking by classCode (requires auth)
+app.delete('/api/bookings/:classCode', requireAuth, async (req, res) => {
+    try {
+        const classCode = Number(req.params.classCode);
+
+        // Look up class name for the notification message
+        const cls = await Class.findOne({ classCode });
+        const className = cls ? cls.className : `Class ${classCode}`;
+
+        await Booking.deleteOne({ classCode });
+
+        io.emit('class_booking_cancelled', {
+            type: 'class_booking_cancelled',
+            message: `Booking for "${className}" has been cancelled.`,
+            classCode
+        });
+
+        res.status(204).send();
+    } catch (err) {
+        res.status(500).json({ error: 'Error cancelling booking: ' + err });
     }
 });
 

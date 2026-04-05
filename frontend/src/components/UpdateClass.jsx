@@ -1,55 +1,54 @@
 import { useState } from 'react';
 
-function UpdateBook({ onBookUpdated, authToken }) {
-  const [isbn, setIsbn] = useState('');
+function UpdateClass({ onClassUpdated, authToken }) {
+  const [classCode, setClassCode] = useState('');
   const [note, setNote] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
         
-    //!! Class 3: block protected action if not logged in
     if (!authToken) {
-      alert('Please login first to update books.');
+      alert('Please login first to update classes.');
       return;
     }
 
-    const updatedBook = {};
+    const updatedClass = {};
     if (note) {
-      updatedBook.note = note;
+      updatedClass.note = note;
     }
 
     try {
-      const response = await fetch(`/api/books/isbn/${isbn}`, {
+      const response = await fetch(`/api/classes/code/${classCode}`, {
         method: 'PATCH',
         headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${authToken}`
         },
 
-        body: JSON.stringify(updatedBook)
+        body: JSON.stringify(updatedClass)
       });
       const result = await response.json();
       
       if (response.status === 200) {
-        setIsbn('');
+        setClassCode('');
         setNote('');
-        if (onBookUpdated) onBookUpdated(); // Refresh the book list
+        if (onClassUpdated) onClassUpdated(); // Refresh the class list
       }
     } catch (error) {
-      console.error('Error updating book:', error);
+      console.error('Error updating class:', error);
     }
   };
 
   return (
     <>
       <div id="update-book">
-        <h2>Add Note (Update Book)</h2>
+        <h2>Add Note (Update Class)</h2>
         <form onSubmit={handleSubmit}>
           <input 
             type="text" 
-            placeholder="ISBN to Update" 
-            value={isbn}
-            onChange={(e) => setIsbn(e.target.value)}
+            placeholder="Class Code to Update" 
+            value={classCode}
+            onChange={(e) => setClassCode(e.target.value)}
             required 
           />
           <input 
@@ -59,11 +58,11 @@ function UpdateBook({ onBookUpdated, authToken }) {
             onChange={(e) => setNote(e.target.value)}
             required 
           />
-          <button type="submit">Update Book</button>
+          <button type="submit">Update Class</button>
         </form>
       </div>
     </>
   );
 }
 
-export default UpdateBook;
+export default UpdateClass;

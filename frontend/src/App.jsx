@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, NavLink } from 'react-router-dom';
 import io from 'socket.io-client';
 
-import DisplayBooks from './components/DisplayBooks';
-import SearchBook from './components/SearchBook';
-import NewBook from './components/NewBook';
-import UpdateBook from './components/UpdateBook';
-import DeleteBook from './components/DeleteBook';
+import DisplayClasses from './components/DisplayClasses';
+import SearchClass from './components/SearchClass';
+import NewClass from './components/NewClass';
+import UpdateClass from './components/UpdateClass';
+import DeleteClass from './components/DeleteClass';
+import BookedClasses from './components/BookedClasses';
 import Login from './components/Login';
 import NotificationCenter from './components/NotificationCenter';
 
@@ -17,10 +18,10 @@ let socket = null;
 
 function App() {
   const [refreshTrigger, setRefreshTrigger] = useState(false);
-  const [isConnected, setIsConnected]       = useState(false);
-  const [notifications, setNotifications]   = useState([]);
-  const [authToken, setAuthToken]           = useState('');
-  const [menuOpen, setMenuOpen]             = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [authToken, setAuthToken] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // ── Socket.io setup
   useEffect(() => {
@@ -31,16 +32,18 @@ function App() {
       reconnectionAttempts: 5
     });
 
-    socket.on('connect',    () => { setIsConnected(true); });
+    socket.on('connect', () => { setIsConnected(true); });
     socket.on('disconnect', () => { setIsConnected(false); });
 
     socket.on('notification', (data) => {
       if (data.type !== 'welcome') addNotification(data);
     });
 
-    socket.on('book_created', (data) => { addNotification(data); setRefreshTrigger(p => !p); });
-    socket.on('book_updated', (data) => { addNotification(data); setRefreshTrigger(p => !p); });
-    socket.on('book_deleted', (data) => { addNotification(data); setRefreshTrigger(p => !p); });
+    socket.on('class_created', (data) => { addNotification(data); setRefreshTrigger(p => !p); });
+    socket.on('class_updated', (data) => { addNotification(data); setRefreshTrigger(p => !p); });
+    socket.on('class_deleted', (data) => { addNotification(data); setRefreshTrigger(p => !p); });
+    socket.on('class_booked', (data) => { addNotification(data); });
+    socket.on('class_booking_cancelled', (data) => { addNotification(data); });
 
     return () => { if (socket) socket.disconnect(); };
   }, []);
@@ -53,7 +56,7 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Notifications 
+  // Notifications
   const addNotification = (notification) => {
     const id = Date.now();
     setNotifications(prev => [...prev, { ...notification, id }]);
@@ -72,6 +75,30 @@ function App() {
 
   const handleLoginFailure = (errorMessage) => {
     addNotification({ type: 'loginFailed', message: `Sign-in failed: ${errorMessage}` });
+  };
+
+  // Book a class which is called from the Browse card
+  const handleBookClass = async (cls) => {
+    if (!authToken) {
+      addNotification({ type: 'loginFailed', message: 'Please sign in to book a class.' });
+      return;
+    }
+    try {
+      const response = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ classCode: cls.classCode })
+      });
+      if (!response.ok) {
+        const err = await response.json();
+        addNotification({ type: 'loginFailed', message: err.error || 'Could not book class.' });
+      }
+    } catch (error) {
+      console.error('Error booking class:', error);
+    }
   };
 
   const closeMenu = () => setMenuOpen(false);
@@ -96,7 +123,7 @@ function App() {
 
             {/* Brand */}
             <Link to="/" className="navbar__brand" onClick={closeMenu}>
-              Class<span>Book</span>
+              Community<span>Classes</span>
             </Link>
 
             {/* Mobile hamburger button */}
@@ -130,11 +157,20 @@ function App() {
 
               {authToken && (
                 <>
+                  <NavLink to="/booked" onClick={closeMenu}
+                    className={({ isActive }) => isActive ? 'nav-active' : ''}>
+                    {({ isActive }) =>
+                      <button type="button" className={isActive ? 'nav-active' : ''}>
+                        Booked Classes
+                      </button>
+                    }
+                  </NavLink>
+
                   <NavLink to="/add" onClick={closeMenu}
                     className={({ isActive }) => isActive ? 'nav-active' : ''}>
                     {({ isActive }) =>
                       <button type="button" className={isActive ? 'nav-active' : ''}>
-                        Add Book
+                        Add Class
                       </button>
                     }
                   </NavLink>
@@ -143,7 +179,7 @@ function App() {
                     className={({ isActive }) => isActive ? 'nav-active' : ''}>
                     {({ isActive }) =>
                       <button type="button" className={isActive ? 'nav-active' : ''}>
-                        Manage
+                        Manage Classes
                       </button>
                     }
                   </NavLink>
@@ -189,7 +225,7 @@ function App() {
           {!authToken && (
             <div className="banner banner--info" role="alert">
               <span aria-hidden="true">ℹ️</span>
-              Please sign in above to access all features — add, update, or delete books.
+              Please sign in above to access all features — book, add, update, or delete classes.
             </div>
           )}
 
@@ -201,30 +237,50 @@ function App() {
                 <>
                   {/* Hero banner — only on home page */}
                   <div className="hero" role="banner">
-                    <h1 className="hero__title">Welcome to ClassBook</h1>
+                    <h1 className="hero__title">Welcome to Community Classes</h1>
                     <p className="hero__sub">
-                      Browse the library collection, search by author or ISBN,
-                      and manage your books — all in one place.
+                      Browse our community class schedule.
                     </p>
                     <button
                       className="hero__cta"
-                      onClick={() => document.getElementById('books-display')?.scrollIntoView({ behavior: 'smooth' })}
+                      onClick={() => document.getElementById('classDisplay')?.scrollIntoView({ behavior: 'smooth' })}
                       type="button"
                     >
-                      Browse collection ↓
+                      Browse classes ↓
                     </button>
                   </div>
 
                   {/* Browse layout — stacks on mobile, side-by-side on desktop */}
+                  <h2 className="display-heading">Browse Classes</h2>
                   <div id="browse-container">
-                    <SearchBook />
-                    <DisplayBooks refreshTrigger={refreshTrigger} />
+                    <SearchClass />
+                    <DisplayClasses
+                      refreshTrigger={refreshTrigger}
+                      onBookClass={handleBookClass}
+                      authToken={authToken}
+                    />
                   </div>
                 </>
               }
             />
 
-            {/* Add Book */}
+            {/* Booked Classes */}
+            <Route
+              path="/booked"
+              element={
+                <>
+                  <nav className="breadcrumb" aria-label="Breadcrumb">
+                    <Link to="/">Home</Link>
+                    <span className="breadcrumb__sep" aria-hidden="true">›</span>
+                    <span className="breadcrumb__current">Booked Classes</span>
+                  </nav>
+                  <h2 className="page-heading">Booked Classes</h2>
+                  <BookedClasses authToken={authToken} />
+                </>
+              }
+            />
+
+            {/* Add Class */}
             <Route
               path="/add"
               element={
@@ -232,15 +288,15 @@ function App() {
                   <nav className="breadcrumb" aria-label="Breadcrumb">
                     <Link to="/">Home</Link>
                     <span className="breadcrumb__sep" aria-hidden="true">›</span>
-                    <span className="breadcrumb__current">Add Book</span>
+                    <span className="breadcrumb__current">Add Class</span>
                   </nav>
-                  <h2 className="page-heading">Add a New Book</h2>
-                  <NewBook onBookAdded={handleRefresh} authToken={authToken} />
+                  <h2 className="page-heading">Add a New Class</h2>
+                  <NewClass onClassAdded={handleRefresh} authToken={authToken} />
                 </>
               }
             />
 
-            {/* Manage Books */}
+            {/* Manage Classes */}
             <Route
               path="/manage"
               element={
@@ -248,13 +304,13 @@ function App() {
                   <nav className="breadcrumb" aria-label="Breadcrumb">
                     <Link to="/">Home</Link>
                     <span className="breadcrumb__sep" aria-hidden="true">›</span>
-                    <span className="breadcrumb__current">Manage Books</span>
+                    <span className="breadcrumb__current">Manage Classes</span>
                   </nav>
-                  <h2 className="page-heading">Manage Books</h2>
+                  <h2 className="page-heading">Manage Classes</h2>
 
                   <div className="manage-grid">
-                    <UpdateBook onBookUpdated={handleRefresh} authToken={authToken} />
-                    <DeleteBook onBookDeleted={handleRefresh} authToken={authToken} />
+                    <UpdateClass onClassUpdated={handleRefresh} authToken={authToken} />
+                    <DeleteClass onClassDeleted={handleRefresh} authToken={authToken} />
                   </div>
                 </>
               }
@@ -264,7 +320,7 @@ function App() {
 
         {/* Footer */}
         <footer className="app-footer" role="contentinfo">
-          <span>© 2026 ClassBook — Library Management System</span>
+          <span>© 2026 Community Classes — Class Schedule System</span>
           <span>CPS 630 · Group Project · A3</span>
         </footer>
 

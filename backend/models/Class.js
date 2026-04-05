@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
-const BookSchema = new mongoose.Schema({
-    isbn: {
+const ClassSchema = new mongoose.Schema({
+    classCode: {
         type:       Number,
         unique:     true,
         required:   true
@@ -11,22 +11,28 @@ const BookSchema = new mongoose.Schema({
         unique:     false,
         required:   true
     },
-    title: {
+    className: {
         type:       String,
         unique:     false,
         required:   true,
         trim:       true
     },
-    author: {
+    instructor: {
         type:       String,
         unique:     false,
         required:   true,
         trim:       true
     },
-    year: {
+    duration: {
         type:       Number,
         unique:     false,
         required:   true
+    },
+    frequency: {
+        type:       String,
+        unique:     false,
+        required:   true,
+        trim:       true
     },
     note: {
         type:       String,
@@ -36,5 +42,5 @@ const BookSchema = new mongoose.Schema({
     }
 });
 
-const Book = mongoose.model('book', BookSchema);
-module.exports = Book;
+const Class = mongoose.model('class', ClassSchema);
+module.exports = Class;
