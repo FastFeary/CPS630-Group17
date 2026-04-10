@@ -147,8 +147,8 @@ async function addTestUsersToMongoDB() {
 }
 
 function requireAuth(req, res, next) {
-    const authHeader = req.headers.authorization;
-    const permissionReq = req.headers.permission;
+    const authHeader = req.headers.authorization; //the JWT 
+    const permissionReq = req.headers.permission; //the permission required for the call
     //we are expecting the auth header to be in the format "Bearer <token>", so we check for that and extract the token
     //"Bearer " is part of the HTTP standard for authorization headers and indicates that the client is sending a token for authentication.
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -167,7 +167,7 @@ function requireAuth(req, res, next) {
                 return res.status(403).json({ error: 'Authorization insufficient to take this action' });  
             };
         }
-        next()
+        next();
         
     })
 }
@@ -296,11 +296,14 @@ app.get('/api/classes/search', async (req, res) => {
 /******* CREATE *********/
 /************************/
 //create new class
-app.post('/api/classes', requireAuth, express.json(), async (req, res) => {
+app.post('/api/classes', express.json(), requireAuth, async (req, res) => {
+    console.log("Got into REST create class");
+    //console.log(req);
     try {
         const newClassData = req.body;
+        console.log(newClassData);
         if (newClassData && newClassData.className && newClassData.instructor && newClassData.duration && newClassData.frequency) {
-
+            console.log("Passes notNull if statement");
             if (!newClassData.hasImage) {
                 newClassData.hasImage = false; //default value
             }
@@ -325,7 +328,7 @@ app.post('/api/classes', requireAuth, express.json(), async (req, res) => {
 });
 
 //Create new User
-app.post('/api/user', requireAuth, express.json(), async (req, res) => {
+app.post('/api/user', express.json(), requireAuth, async (req, res) => {
     try {
         const newUserData = req.body;
         if (newUserData && newUserData.username && newUserData.password) {
@@ -358,7 +361,7 @@ app.post('/api/user', requireAuth, express.json(), async (req, res) => {
 /******* UPDATE *********/
 /************************/
 //update class by class code (unique)
-app.patch('/api/classes/code/:code', requireAuth, express.json(), async (req, res) => {
+app.patch('/api/classes/code/:code', express.json(), requireAuth, async (req, res) => {
     try {
         console.log("PATCH request received");
 
@@ -396,7 +399,7 @@ app.patch('/api/classes/code/:code', requireAuth, express.json(), async (req, re
 /******* DELETE *********/
 /************************/
 //delete by unique id, i.e., class code (can only delete one)
-app.delete('/api/classes/code/:code', requireAuth, async (req, res) => {
+app.delete('/api/classes/code/:code', express.json(), requireAuth, async (req, res) => {
     try {
         const classCode = Number(req.params.code);
         const classFilter = { classCode: classCode };
@@ -443,10 +446,11 @@ app.get('/api/bookings', async (req, res) => {
 });
 
 // Book a class (requires auth)
-app.post('/api/bookings', requireAuth, express.json(), async (req, res) => {
+app.post('/api/bookings', express.json(), requireAuth, async (req, res) => {
+    console.log("made it past auth");
     try {
         const { classCode } = req.body;
-        const participant = req.user.username;
+        const participant = req.headers.user.username;
         if (!classCode) {
             return res.status(400).json({ error: 'classCode is required' });
         }
@@ -486,7 +490,7 @@ app.post('/api/bookings', requireAuth, express.json(), async (req, res) => {
 });
 
 // Cancel a booking by classCode (requires auth)
-app.delete('/api/bookings/:classCode', requireAuth, async (req, res) => {
+app.delete('/api/bookings/:classCode', express.json(), requireAuth, async (req, res) => {
     try {
         const classCode = Number(req.params.classCode);
 

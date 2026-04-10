@@ -1,0 +1,11 @@
+POST  http://localhost:5173/api/classes
+Content-Type: application/json
+
+{
+    "classCode": 1008,
+    "className": "Testing",
+    "instructor": "Test Instruct",
+    "duration": 90,
+    "frequency": "mon/wed jan 6 - april 25 2026",
+    "note": "testing note"
+}

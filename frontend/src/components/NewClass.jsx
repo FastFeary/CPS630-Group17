@@ -26,7 +26,7 @@ function NewClass({ onClassAdded, authToken }) {
       frequency: formData.frequency,
       note: formData.note
     };
-
+    
     try {
       const response = await fetch('/api/classes', {
         method: 'POST',
