@@ -1,69 +1,77 @@
-# **CPS630 Group 17 Assignment 2 (Library Book System)**
+# **CPS630 Group 17 Assignment 3 (Class Booking System)**
     Contributors: 
     - Freddy Koehlmann (501050151) 
     - Abdullah Hachimi (501178743)
     - Naureen Hossain (501239728)
     - Celestino Gellido (501103802)
 
-##  Overview
-This web application builds on the ideas and foundation of the previously built application in a new context, but serves to stand as a medium-fidelity MERN application. 
+## Overview
+This web application rounds out all previous iterations to become a high-fidelity MERN application with additional components and changes to achieve a better user-friendly environment. 
 
-The concept for this iteration revolves around a Library Book System, in which users can create, read, update, and delete books within the library based on information such as author name and isbn inputted by said user. The purpose of this application is to demonstrate the basic functions of a web application's backend and frontend, while maintaining full interaction with a database.
+In this final iteration we return to the initial concept from the first iteration, then borrowing the knowledge from the second to facilitate a more authentic user experience. So the concept is in line with the user booking classes at a community college, or creating classes they wish to teach.
 
-The general framework of the book schema is utilized in such a way to emulate the user experience of checking out books in a library through a computer system. Instead of just seeing it as an emulated database in JSON files, the user can see it through the library's book database being updated in real time.
 
 ## Documentation
-Prior to interacting with the project any further, ensure that MongoDB and MongoDB Compass are installed using the links below. Both will ensure connection to the database and show the connections made during the running of the frontend and backend.
+Ensure that MongoDB and MongoDB Compass are installed, that way a connection is established between the database and the frontend, using the links below.
 
 MongoDB: <ins>https://www.mongodb.com/try/download/community</ins>
 
 MongoDB Compass: <ins>https://www.mongodb.com/try/download/compass</ins>
 
+Download the project and open it through Visual Studio Code, ensure the Compass is running in tandem.
 
-Upon download of the project, unzip the file and open in Visual Studio Code.
+Upon opening two terminals, use the following command on either one:
 
-Open two terminals, and on either one use the command: 
 ```
 brew services start mongodb/brew/mongodb-community
 ```
-This will connect us to localhost. Open MongoDB Compass and click connect on the left to the port 27017 which is the MongoDB port.
 
-On one terminal, use the command:
+Open MongoDB Compass and click connect on the left.
+
+On one terminal in VSCode, switch to the frontend and install Node by using the command:
+
 ```
 cd frontend && npm install
 ```
-and on the other, use:
+On the other, switch to the backend and do the same with the command:
 ```
 cd backend && npm install
 ```
-Essentially, one terminal will run the backend plus the server, and the other will run the frontend and the page itself.
 
-On the backend terminal, run the command:
+Run the backend on the backend terminal using:
 ```
 npm run start
 ```
-Now that there is a connection to the database, go the the Compass and refresh beside localhost to see book_library. This will be important in seeing the user's interactions.
-
-From here you can open up the frontend by using the following on the frontend terminal:
+and the frontend using the frontend terminal with:
 ```
 npm run dev
 ```
-Open a web broswer and enter the address in the search bar:
+Once both are running, open up a web browser and go to the following address in the search bar:
 ```
 localhost:5173
 ```
-Now on the home page, we can see the library's catalogue of books available. The user can search for books by providing the full first and last name of the author (e.g. "Liu Cixin", not just "Liu" or "Cixin") in the search bar and then clicking search.
 
-The navigation bar on the top can take the user to the Add Book and Manage Books page. On Add Book, it will prompt the user to fill out the fields of the ISBN, title, author, year, and note of the book they would like to add to the catalog. Once clicking Add Book, checking the home page will now include the updated book. 
+Now, the user must log in before accessing any of the features available for use.
 
-Upon doing that however, access the MongoDB Compass and click the refresh documents button near the right, now notice the new book is properly added to the database as well. 
+Basic users can only book/unbook classes, while admin users can add, update, and delete classes on top of booking (exclusive for an admin, so basic users cannot do those functions). Searching for classes is universal for both, only the instructor's name or class code can be used in the browse tab.
 
-Manage Books will take the user to the next page of updating and deleting books. The functions operate in a similar way before but the update operation requires the ISBN and the new note to replace for the intended book. Deleting books also requires the ISBN, just like the add book operation, executing will see the book gone from the frontend catalog in the home page and the database in the Compass once refreshed.
+To log in as a basic user, the username is: **BasicUser2** and password is **TestPassword123**. You can only book classes by clicking book class under the desired class below in the Browse tab. You can then view booked classes in the Booked Classes tab, where you can also remove those classes from your bookings.
 
+To log in as an admin user, the username is: **AdminUser1** and password is **Ch@rliePapaS1erra630**.
+
+As an admin, the Add Class tab will take you to a page to fill out class details (Class Code, Class Name, Instructor name, Duration, Schedule, and an optional note). Once they've been filled out, click on Add Class and it will be added to the classes in the Browse tab.
+
+Manage Classes tab will take you to the Update class and Delete class functions. To update, fill out the class code and the new note, and clicking Update Class will be carry out the change. In a similar fashion, fill out the class code in the Delete Class section, and clicking Delete Class will remove the class entirely.
+
+All of the previously described functions will not only be visible on the frontend but the backend too, if the user keeps track using the Compass, refreshing every time a change has been made.
+
+Notifications will also let the user when actions such as adding classes or booking classes have been executed successfully or unsuccessfully.
 
 ## Reflection
-Submitted material primarily includes the backend and frontend of the application. The backend is structured in the standard Node.js and Express frameworks, with the book schema containing key information such as author name, book title, isbn, and year. Both server.js and the book schema were designed to ensure connection to MongoDB/Mongoose, and contain the main functions of the application. The frontend is implemented with React+Vite  framework with multiple views, each jsx component serving specific CRUD operations situated inside server.js through the REST API. 
+Submitted content for the final submission includes the frontend and backend, otherwise referred to as the key components of the MERN application.
 
-The overlying functions of the application follow the CRUD principles. The user can navigate through the application with the navigation bar overhead. They are able to view the library catalog and search for books according to the author's first and last name, can add books to the catalog on one page, and update or delete books in the other.
+Models on the backend have been changed to account for bookings, classes, and users. The frontend UI is more streamlined, and now features fields where you can login with username and password. Notifications are implemented using Socket.io to establish real-time communication between client and server, in the corner it shows the status of connection to the backend database. So if the user disconnected the backend while the frontend was running, it will know.
 
-During the process of making this application, we were able to navigate the encountered challenges with practiced ease. A notable challenge involved the Read operation from the REST API. It was quickly realized that both the author's first and last name are required for the operation to work properly. However the successes came when they mattered, such as establishing the connection on MongoDB and developing the remainder of the REST API.
+Authentication is structured in three parts: user creation, user login, and REST calls. In user creation, the password is hashed with bcrypt, then username, passwordHash and permission are stored in mongoDB. There is also an unused REST api for creating new users. For user login, it searches MongoDB for username and retrieves passwordHash and permission. Then verifies comparing with bcrypt that the submitted plaintext password fits with stored passwordHash. After that a JavaWebToken is created and sent with username and permission. Finally, on REST calls, requireAuth function is called to verify the JWT and checks if they have needed permission. It also sends back decrypted username in JWT token.
+
+A major challenge that was overcome was the authentication for specific functions for an admin user. Initially an admin user could not add or update classes. But through inspection and debugging showed that the requireAuth function was being called before request.json. Which made it so requests and their payloads weren't being carried out from the frontend to backend. Switching the positions of the calls allowed the authentication to execute at a reasonable point in the request process.
