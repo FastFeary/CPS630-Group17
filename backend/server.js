@@ -167,8 +167,9 @@ function requireAuth(req, res, next) {
                 return res.status(403).json({ error: 'Authorization insufficient to take this action' });  
             };
         }
-        next();
-        
+        else{
+            next();
+        }
     })
 }
 
@@ -450,7 +451,7 @@ app.post('/api/bookings', express.json(), requireAuth, async (req, res) => {
     console.log("made it past auth");
     try {
         const { classCode } = req.body;
-        const participant = req.headers.user.username;
+        const participant = req.user.username;
         if (!classCode) {
             return res.status(400).json({ error: 'classCode is required' });
         }
