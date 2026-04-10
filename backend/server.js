@@ -7,6 +7,7 @@ const http = require('http');
 const { Server: SocketIOServer } = require('socket.io');
 const Class = require('./models/Class');
 const Booking = require('./models/Booking');
+const User = require('./models/User')
 const bcrypt = require('bcrypt');
 const { hash } = require('crypto');
 const jwt = require('jsonwebtoken');
@@ -14,11 +15,6 @@ const jwt = require('jsonwebtoken');
 const PORT = 8080;
 const DATABASE_HOST = 'localhost';
 const DATABASE_PORT = 27017;
-
-//Basic Auth Values from Node environment variables
-// const AUTH_USERNAME = process.env.AUTH_USERNAME;
-// const AUTH_PASSWORD = process.env.AUTH_PASSWORD;
-// const AUTH_TOKEN = process.env.AUTH_TOKEN;
 
 //bycrpt values for Auth hashing of passwords
 const saltRounds = 10;
@@ -28,12 +24,6 @@ const saltRounds = 10;
 // > require('crypto').randomBytes(64).toString('hex')
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET;
 const REFRESH_ACCESS_TOKEN = process.env.REFRESH_ACCESS_TOKEN;
-//test admin user credentials
-const testUserName1_Admin = "AdminUser1";
-const test1PlaintTextPassword = "Ch@rliePapaS1erra630";
-//test basix user credentials
-const testUserName2_Basic = "BasicUser2";
-const test2PlaintTextPassword = "TestPassword123";
 
 
 // Create HTTP server and Socket.io instance
@@ -54,15 +44,15 @@ mongoose.connect(dbURL);
 
 const db = mongoose.connection;
 const classesColl = db.collection("classes");
+const usersColl = db.collection("users");
 db.on('error', function (e) {
     console.log('error connecting:' + e);
 });
 db.on('open', function () {
     console.log('database connected!');
     addTestClassesToMongoDB();
+    addTestUsersToMongoDB();
 });
-//Add test passwords to db
-addTestPasswordsToMongoDB();
 
 //Socket.io Connection Handler
 io.on('connection', (socket) => {
@@ -120,54 +110,45 @@ async function addTestClassesToMongoDB() {
     }
 }
 
+//Sample users to test the database
+let test_users = [
+    {username: "AdminUser1", password: "Ch@rliePapaS1erra630", permission: "admin"},
+    {username: "BasicUser2", password: "TestPassword123"}
+];
+//For mapping call -> turns password(plaintext) into passwordHash
+//takes in user in form {username: plaintext, password: plaintext, permissions: optional}
+async function hashPassword(user){
+    user.passwordHash = await bcrypt.hash((user.password), saltRounds);
+    delete user.password;
+    return user;
+}
 //Add testing passwords for bcrypt 
-async function addTestPasswordsToMongoDB() {
-    try {
-        const hash1 = await bcrypt.hash(test1PlaintTextPassword, saltRounds);
-        console.log(`Hash1: ${hash1}`);
+async function addTestUsersToMongoDB() {
+ try {
+        console.log('Syncing seed users with database ...');
 
-        const res1 = await bcrypt.compare(test1PlaintTextPassword, hash1);
-        console.log(`Pass1Test: ${res1}`);
+        const test_users_hashed = await Promise.all(test_users.map(hashPassword));
 
-        const hash2 = await bcrypt.hash(test2PlaintTextPassword, saltRounds);
-        console.log(`Hash2: ${hash2}`);
+        const upsertPromises = test_users_hashed.map(userData =>
+            User.updateOne(
+                { username: userData.username },   // match by username
+                { $set: userData },                // apply all fields
+                { upsert: true }                   // insert if not found
+            )
+                .then(() => console.log('Synced user: ' + userData.username))
+                .catch(err => console.error('Error syncing test Users ' + userData.username + ': ' + err))
+        );
 
-        const res2 = await bcrypt.compare(test2PlaintTextPassword, hash2);
-        console.log(`Pass2Test: ${res2}`);
-
-        if (res1 && res2){
-            console.log('Password hashing and validation working!')
-        };
-
+        await Promise.all(upsertPromises);
+        console.log('All test Users synced successfully!');
     } catch (err) {
-        console.error('Error bcrypt creating or validating hash: ' + err);
+        console.error('Error in addTestUsersToMongoDB: ' + err);
     }
-
-
-    
-    // try {
-    //     console.log('Syncing seed classes with database ...');
-
-    //     const upsertPromises = class_schedule.map(classData =>
-    //         Class.updateOne(
-    //             { classCode: classData.classCode },   // match by code
-    //             { $set: classData },                  // apply all fields
-    //             { upsert: true }                      // insert if not found
-    //         )
-    //             .then(() => console.log('Synced class ' + classData.classCode + ': ' + classData.className))
-    //             .catch(err => console.error('Error syncing class ' + classData.classCode + ': ' + err))
-    //     );
-
-    //     await Promise.all(upsertPromises);
-    //     console.log('All seed classes synced successfully!');
-    // } catch (err) {
-    //     console.error('Error in addTestClassesToMongoDB: ' + err);
-    // }
 }
 
 function requireAuth(req, res, next) {
     const authHeader = req.headers.authorization;
-
+    const permissionReq = req.headers.permission;
     //we are expecting the auth header to be in the format "Bearer <token>", so we check for that and extract the token
     //"Bearer " is part of the HTTP standard for authorization headers and indicates that the client is sending a token for authentication.
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -176,13 +157,19 @@ function requireAuth(req, res, next) {
 
     const token = authHeader.split(' ')[1]; //split token at first space since everthing after is the token "Bearer <token>"
     jwt.verify(token, ACCESS_TOKEN_SECRET, (err, user) => {
-        if (err) return res.sendStatus(403)
+        if (err) return res.status(403).json({ error: 'Authorization insufficient to take this action' });
         req.user = user
+        if (permissionReq === 'admin'){
+            if(user.permission === permissionReq){
+                next();
+            }
+            else {
+                return res.status(403).json({ error: 'Authorization insufficient to take this action' });  
+            };
+        }
         next()
+        
     })
-    // if (token !== AUTH_TOKEN) {
-    //     return res.status(401).json({ error: 'Invalid auth token' });
-    // }
 }
 
 /*************************************************/
@@ -194,44 +181,28 @@ function requireAuth(req, res, next) {
 /******* AUTH ***********/
 /************************/
 //Simple login route that returns a static demo token
-app.post('/api/auth/login', express.json(), (req, res) => {
+app.post('/api/auth/login', express.json(), async (req, res) => {
     const { username, password } = req.body || {};
 
     if (!username || !password) {
         return res.status(400).json({ error: 'Username and password are required' });
     }
 
-    //Login check for test admin user
-    if (username === testUserName1_Admin && password === test1PlaintTextPassword) {
-        //User data for JWT token
-        const user = {
-            name: username,
-            permission: 'admin'
-        };
-        //Sign/create JWT token with secret from .env
-        const ACCESS_TOKEN = jwt.sign(user, ACCESS_TOKEN_SECRET);
+    const userData = await usersColl.find({username: username}).toArray();
+    if (userData.length === 1){
+        const user = userData[0];
+        const passwordHash = user.passwordHash;
+        const match = await bcrypt.compare(password, passwordHash);
 
-        return res.status(200).json({
-            message: 'Login successful',
-            token: ACCESS_TOKEN
-        });
+        const userTokenData = {username: user.username, permission: user.permission};
+        if (match === true) {
+            const ACCESS_TOKEN = jwt.sign(userTokenData, ACCESS_TOKEN_SECRET);
+            return res.status(200).json({
+                message: 'Login successful',
+                token: ACCESS_TOKEN
+            });
+        }
     }
-    //Login check for test basic user
-    else if (username === testUserName2_Basic && password === test2PlaintTextPassword) {
-        //User data for JWT token
-        const user = {
-            name: username,
-            permission: 'basic'
-        };
-        //Sign/create JWT token with secret from .env
-        const ACCESS_TOKEN = jwt.sign(user, ACCESS_TOKEN_SECRET);
-
-        return res.status(200).json({
-            message: 'Login successful',
-            token: ACCESS_TOKEN
-        });
-    }
-
     return res.status(401).json({ error: 'Invalid username or password' });
 });
 
@@ -353,6 +324,35 @@ app.post('/api/classes', requireAuth, express.json(), async (req, res) => {
     }
 });
 
+//Create new User
+app.post('/api/user', requireAuth, express.json(), async (req, res) => {
+    try {
+        const newUserData = req.body;
+        if (newUserData && newUserData.username && newUserData.password) {
+
+            const username = newUserData.username;
+            const passwordHash = await bcrypt.hash(newUserData.password, saltRounds);
+            const newUser = new User({
+                username: username,
+                passwordHash: passwordHash
+            });
+            const savedUser = await newUser.save()
+
+            // Emit real-time notification to all connected clients
+            // io.emit('user_created', {
+            //     type: 'user_added',
+            //     message: `New user added: "${username}",
+            // });
+
+            res.status(201);
+        } else {
+            res.status(400).json({ error: "Invalid User data" });
+        }
+    } catch (err) {
+        res.status(500).json({ error: 'Error creating User: ' + err });
+    }
+});
+
 /************************/
 /******* SERVER *********/
 /******* UPDATE *********/
@@ -446,9 +446,13 @@ app.get('/api/bookings', async (req, res) => {
 app.post('/api/bookings', requireAuth, express.json(), async (req, res) => {
     try {
         const { classCode } = req.body;
-
+        const participant = req.user.username;
         if (!classCode) {
             return res.status(400).json({ error: 'classCode is required' });
+        }
+
+        if (!participant) {
+            return res.status(400).json({ error: 'user participant is required' });
         }
 
         // Make sure the class exists
@@ -464,7 +468,7 @@ app.post('/api/bookings', requireAuth, express.json(), async (req, res) => {
         }
 
         // Create booking
-        const newBooking = new Booking({ classCode: Number(classCode) });
+        const newBooking = new Booking({ classCode: Number(classCode), participant: participant });
         const savedBooking = await newBooking.save();
 
         // Emit real time notification to all connected clients

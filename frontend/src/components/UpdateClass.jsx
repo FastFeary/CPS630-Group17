@@ -22,7 +22,8 @@ function UpdateClass({ onClassUpdated, authToken }) {
         method: 'PATCH',
         headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${authToken}`
+            Authorization: `Bearer ${authToken}`,
+            Permission: 'admin'
         },
 
         body: JSON.stringify(updatedClass)

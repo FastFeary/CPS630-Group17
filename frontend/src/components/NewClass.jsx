@@ -32,7 +32,8 @@ function NewClass({ onClassAdded, authToken }) {
         method: 'POST',
         headers: { 
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`
+            'Authorization': `Bearer ${authToken}`,
+            Permission: 'admin'
         },
         body: JSON.stringify(newClass)
       });

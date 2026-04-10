@@ -17,7 +17,8 @@ function DeleteClass({ onClassDeleted, authToken }) {
       const response = await fetch(`/api/classes/code/${classCode}`, {
         method: 'DELETE',
         headers: {
-          Authorization: `Bearer ${authToken}`
+          Authorization: `Bearer ${authToken}`,
+          Permission: 'admin'
         }
       });
       

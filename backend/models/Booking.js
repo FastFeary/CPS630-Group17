@@ -8,6 +8,10 @@ const BookingSchema = new mongoose.Schema({
     bookedAt: {
         type:    Date,
         default: Date.now
+    },
+    participant:{
+        type: String,
+        required: true
     }
 });
 
